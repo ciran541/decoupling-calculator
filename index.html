@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <title>Decoupling Calculator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+      <div class="calculator">
+        <div class="calculator-content">
+          <!-- Inputs Section -->
+          <div class="inputs-section">
+            <!-- <h2 class="section-title">Decoupling Calculator</h2> -->
+            
+            <div class="input-columns">
+              <div class="input-column">
+                <h3 class="subheading">Property Details</h3>
+                
+                <div class="input-group">
+                  <label class="input-label" for="propertyValuation">Property Valuation</label>
+                  <div class="input-container">
+                    <div class="input-icon">SGD</div>
+                    <input type="number" id="propertyValuation" value="1000000" min="100000">
+                  </div>
+                  <div class="field-error" id="propertyValuationError"></div>
+                </div>
+  
+                <div class="input-group">
+                  <label class="input-label" for="outstandingLoan">Outstanding Loan</label>
+                  <div class="input-container">
+                    <div class="input-icon">SGD</div>
+                    <input type="number" id="outstandingLoan" value="500000" min="0">
+                  </div>
+                  <div class="field-error" id="outstandingLoanError"></div>
+                </div>
+  
+                <div class="input-group">
+                  <label class="input-label" for="yearsSincePurchase">Years Since Purchase</label>
+                  <div class="input-container">
+                    <select id="yearsSincePurchase">
+                      <option value="0">Less than 1 year</option>
+                      <option value="1">Between 1 & 2 years</option>
+                      <option value="2">Between 2 & 3 years</option>
+                      <option value="3" selected>More than 3 years</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+  
+              <div class="input-column">
+                <h3 class="subheading">Buyer's Profile</h3>
+                
+                <div class="input-group">
+                  <label class="input-label" for="buyerShare">Shareholding %</label>
+                  <div class="input-container">
+                    <div class="input-icon">%</div>
+                    <input type="number" id="buyerShare" value="60" min="1" max="99">
+                  </div>
+                  <div class="field-error" id="buyerShareError"></div>
+                </div>
+                <div class="input-group">
+                  <label class="input-label" for="buyerAge">Age</label>
+                  <div class="input-container">
+                    <div class="input-icon">Years</div>
+                    <input type="number" id="buyerAge" value="40" min="21" max="65">
+                  </div>
+                  <div class="field-error" id="buyerAgeError"></div>
+                </div>
+  
+                <div class="input-group">
+                  <label class="input-label">Residency</label>
+                  <div class="radio-group">
+                    <label class="radio-label" for="singaporean">
+                      <input type="radio" id="singaporean" name="residency" value="Singaporean" checked>
+                      <span class="radio-text">Singaporean</span>
+                    </label>
+                    <label class="radio-label" for="pr">
+                      <input type="radio" id="pr" name="residency" value="PR">
+                      <span class="radio-text">PR</span>
+                    </label>
+                    <label class="radio-label" for="foreigner">
+                      <input type="radio" id="foreigner" name="residency" value="Foreigner">
+                      <span class="radio-text">Foreigner</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+  
+              <div class="input-column">
+                <h3 class="subheading">Seller's Profile</h3>
+                
+                <div class="input-group">
+                  <label class="input-label" for="sellerShare">Shareholding %</label>
+                  <div class="input-container">
+                    <div class="input-icon">%</div>
+                    <input type="number" id="sellerShare" value="40" min="1" max="99" readonly>
+                  </div>
+                  <div class="field-error" id="sellerShareError"></div>
+                </div>
+  
+                <div class="input-group">
+                  <label class="input-label" for="cpfUsage">CPF Usage (incl. interest)</label>
+                  <div class="input-container">
+                    <div class="input-icon">SGD</div>
+                    <input type="number" id="cpfUsage" value="150000" min="0">
+                  </div>
+                  <div class="field-error" id="cpfUsageError"></div>
+                </div>
+              </div>
+            </div>
+  
+            <div class="error-message" id="error"></div>
+          </div>
+  
+          <!-- Results Section -->
+          <div class="results-section" id="results">
+            <div class="results-header">
+              <div>
+                <h2 class="section-title">Decoupling Results</h2>
+                <p class="results-subtitle">Based on your inputs, here's the breakdown of costs and financial details for both parties.</p>
+              </div>
+            </div>
+            
+            <div class="initial-message">
+              <div class="initial-message-icon">
+                <img src="https://theloanconnection.com.sg/wp-content/uploads/2025/04/stamp_duty_icon.png" alt="Calculator Icon">
+              </div>
+              <div class="initial-message-content">
+                <div class="initial-message-title">Decoupling Calculator</div>
+                <div class="initial-message-description">
+                  Enter the decoupling details above to estimate costs for both buyer and seller. Results update automatically as you input values.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <script src="script.js"></script>
+</body>
+</html>
