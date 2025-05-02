@@ -1,6 +1,8 @@
 // Utility Functions
 function formatMoney(amount) {
-  return "$" + Math.abs(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+  const absAmount = Math.abs(amount);
+  const formatted = "$" + absAmount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+  return amount < 0 ? "-" + formatted : formatted;
 }
 
 function calculateMonthlyInstallment(principal, rate, years) {
@@ -213,7 +215,9 @@ document.addEventListener('DOMContentLoaded', function() {
     results.innerHTML = `
       <div class="results-header">
         <h2 class="section-title">Decoupling Results</h2>
-        <p class="results-subtitle">Based on your inputs - ${formatMoney(valuation)} property valuation</p>
+<div class="disclaimer">
+        The approach illustrated below assumes that you intend to take financing for the part-purchase. This is just one of several ways to structure a decoupling. Taking new financing is not mandatory — other alternatives such as an additional term loan or tenure extension may also be available. Contact us <a href="https://theloanconnection.com.sg/loan-application-form/?enquiry=coupling" target="_blank" style="color: var(--primary-color); text-decoration: underline; font-weight: 500; transition: color 0.2s ease;" onmouseover="this.style.color='var(--primary-color-dark, color-mix(in srgb, var(--primary-color) 80%, black))'" onmouseout="this.style.color='var(--primary-color)'">here</a> to find out more.
+      </div>
       </div>
       
       <div class="results-container">
@@ -256,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <span class="result-value">${formatMoney(bankLoan75Percent)}</span>
             </div>
             <div class="result-row">
-              <span class="result-label">New Total Loan</span>
+              <span class="result-label">New Total Loan<br>(incl. current loan liability)</span>
               <span class="result-value">${formatMoney(newTotalLoan)}</span>
             </div>
             <div class="result-row">
@@ -344,8 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
       
       <div class="disclaimer">
-        <strong>Disclaimer from TLC:</strong> The approach illustrated above assumes that you intend to take financing for the part-purchase. 
-        This is just one of several ways to structure a decoupling. Taking new financing is not mandatory — other alternatives such as an additional equity loan or tenure extension may also be available.
+        <strong>Disclaimer from TLC:</strong> Figures provided on this page are for illustration purposes and do not constitute as a formal approval from a bank.
       </div>
     `;
   }
