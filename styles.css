@@ -93,7 +93,6 @@ body {
   content: '';
   width: 8px;
   height: 18px;
- 
   margin-right: 10px;
   border-radius: 4px;
   display: inline-block;
@@ -152,6 +151,7 @@ body {
 }
 
 input[type="number"],
+input[type="text"],
 select {
   width: 100%;
   padding: 12px 15px;
@@ -161,6 +161,8 @@ select {
   color: var(--primary-color);
   font-weight: 500;
   background-color: #fff;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
 }
 
 .input-container:focus-within {
@@ -168,12 +170,14 @@ select {
   box-shadow: 0 0 0 2px rgba(5, 45, 74, 0.1);
 }
 
-input:focus,
+input[type="number"]:focus,
+input[type="text"]:focus,
 select:focus {
   outline: none;
 }
 
-input::placeholder {
+input[type="number"]::placeholder,
+input[type="text"]::placeholder {
   color: #999;
   opacity: 0.8;
 }
@@ -245,7 +249,6 @@ input::placeholder {
   padding: 32px;
   background-color: #ffffff;
   border-radius: var(--border-radius);
-  /* margin-bottom: 40px; */
   position: relative;
   box-shadow: var(--box-shadow);
 }
@@ -329,7 +332,6 @@ input::placeholder {
   display: flex;
   gap: 28px;
   margin-bottom: 32px;
-  /* max-width: 1200px; */
   margin-left: auto;
   margin-right: auto;
 }
@@ -361,13 +363,13 @@ input::placeholder {
 /* Card Header */
 .result-card-header {
   display: flex;
-  flex-direction: row; /* Changed from column to row */
+  flex-direction: row;
   align-items: center;
-  justify-content: flex-start; /* Changed from center to flex-start */
+  justify-content: flex-start;
   padding: 20px 24px;
   background: linear-gradient(to right, rgba(3, 98, 167, 0.05), rgba(3, 169, 231, 0.08));
   border-bottom: 1px solid rgba(0,0,0,0.05);
-  text-align: left; /* Changed from center to left */
+  text-align: left;
 }
 
 .result-card-icon {
@@ -378,10 +380,10 @@ input::placeholder {
   height: 38px;
   background-color: white;
   border-radius: 50%;
-  margin-right: 15px; /* Added margin-right instead of margin-bottom */
-  margin-bottom: 0; /* Removed bottom margin */
+  margin-right: 15px;
+  margin-bottom: 0;
   box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-  flex-shrink: 0; /* Prevents icon from shrinking */
+  flex-shrink: 0;
 }
 
 .result-card-icon img {
@@ -449,7 +451,6 @@ input::placeholder {
   padding: 18px;
   margin: 10px -14px;
   border-radius: 8px;
-  /* border-left: 3px solid var(--secondary-color); */
   border-bottom: none;
 }
 
@@ -501,7 +502,6 @@ input::placeholder {
 .disclaimer {
   margin-top: 28px;
   padding: 18px 24px;
-  /* border-left: 4px solid #fdc500; */
   border-radius: 8px;
   font-size: 14px;
   color: #555;
@@ -548,7 +548,7 @@ input::placeholder {
 }
 
 @media (max-width: 768px) {
-  .container{
+  .container {
     padding: 0 10px;
   }
   .results-section {
@@ -664,9 +664,6 @@ input::placeholder {
   .results-title {
     font-size: 20px;
   }
-  
-
-
 }
 
 /* Radio Button Groups */
@@ -736,4 +733,3 @@ input[type="radio"]:active {
   outline: none;
   box-shadow: none;
 }
-

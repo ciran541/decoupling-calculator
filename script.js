@@ -5,6 +5,17 @@ function formatMoney(amount) {
   return amount < 0 ? "-" + formatted : formatted;
 }
 
+function formatNumberWithCommas(value) {
+  if (!value) return "";
+  const number = parseFloat(value.replace(/,/g, ""));
+  if (isNaN(number)) return value;
+  return number.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function parseFormattedNumber(value) {
+  return parseFloat(value.replace(/,/g, "")) || 0;
+}
+
 function calculateMonthlyInstallment(principal, rate, years) {
   const monthlyRate = rate / 12 / 100;
   const months = years * 12;
@@ -122,22 +133,27 @@ document.addEventListener('DOMContentLoaded', function() {
     cpfUsage: document.querySelector('label[for="cpfUsage"]')
   };
 
+  // Format input fields on load
+  ['propertyValuation', 'outstandingLoan', 'buyerShare', 'buyerAge', 'cpfUsage'].forEach(id => {
+    inputs[id].value = formatNumberWithCommas(inputs[id].value);
+  });
+
   function updateSellerShare() {
-    const buyerShare = parseFloat(inputs.buyerShare.value) || 0;
-    inputs.sellerShare.value = (100 - buyerShare).toFixed(0);
+    const buyerShare = parseFormattedNumber(inputs.buyerShare.value);
+    inputs.sellerShare.value = formatNumberWithCommas((100 - buyerShare).toFixed(0));
   }
 
   function calculate() {
-    const valuation = parseFloat(inputs.propertyValuation.value) || 0;
-    const loan = parseFloat(inputs.outstandingLoan.value) || 0;
+    const valuation = parseFormattedNumber(inputs.propertyValuation.value);
+    const loan = parseFormattedNumber(inputs.outstandingLoan.value);
     const yearsOwned = inputs.yearsSincePurchase.value;
-    const buyerSharePercent = parseFloat(inputs.buyerShare.value) || 0;
-    const sellerSharePercent = parseFloat(inputs.sellerShare.value) || 0;
+    const buyerSharePercent = parseFormattedNumber(inputs.buyerShare.value);
+    const sellerSharePercent = parseFormattedNumber(inputs.sellerShare.value);
     const buyerShare = buyerSharePercent / 100;
     const sellerShare = sellerSharePercent / 100;
     const residency = document.querySelector('input[name="residency"]:checked').value;
-    const age = parseFloat(inputs.buyerAge.value) || 0;
-    const cpf = parseFloat(inputs.cpfUsage.value) || 0;
+    const age = parseFormattedNumber(inputs.buyerAge.value);
+    const cpf = parseFormattedNumber(inputs.cpfUsage.value);
 
     // Validate inputs
     const validationErrors = [
@@ -215,9 +231,9 @@ document.addEventListener('DOMContentLoaded', function() {
     results.innerHTML = `
       <div class="results-header">
         <h2 class="section-title">Decoupling Results</h2>
-<div class="disclaimer">
-        The approach illustrated below assumes that you intend to take financing for the part-purchase. This is just one of several ways to structure a decoupling. Taking new financing is not mandatory — other alternatives such as an additional term loan or tenure extension may also be available. Contact us <a href="https://theloanconnection.com.sg/loan-application-form/?enquiry=coupling" target="_blank" style="color: var(--primary-color); text-decoration: underline; font-weight: 500; transition: color 0.2s ease;" onmouseover="this.style.color='var(--primary-color-dark, color-mix(in srgb, var(--primary-color) 80%, black))'" onmouseout="this.style.color='var(--primary-color)'">here</a> to find out more.
-      </div>
+        <div class="disclaimer">
+          The approach illustrated below assumes that you intend to take financing for the part-purchase. This is just one of several ways to structure a decoupling. Taking new financing is not mandatory — other alternatives such as an additional term loan or tenure extension may also be available. Contact us <a href="https://theloanconnection.com.sg/loan-application-form/?enquiry=coupling" target="_blank" style="color: var(--primary-color); text-decoration: underline; font-weight: 500; transition: color 0.2s ease;" onmouseover="this.style.color='var(--primary-color-dark, color-mix(in srgb, var(--primary-color) 80%, black))'" onmouseout="this.style.color='var(--primary-color)'">here</a> to find out more.
+        </div>
       </div>
       
       <div class="results-container">
@@ -348,12 +364,25 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
       
       <div class="disclaimer">
-        <strong>Disclaimer from TLC:</strong> Figures provided on this page are for illustration purposes and do not constitute as a formal approval from a bank.
+        <strong>Disclaimer from TLC:</strong> Figures provided on this page are for illustration purposes and do not constitute as a formal approval from a bank.
       </div>
     `;
   }
 
-  // Event Listeners
+  // Event Listeners for formatting inputs
+  ['propertyValuation', 'outstandingLoan', 'buyerShare', 'buyerAge', 'cpfUsage'].forEach(id => {
+    inputs[id].addEventListener('input', function() {
+      // Allow only numbers and commas
+      this.value = this.value.replace(/[^0-9,]/g, '');
+      calculate();
+    });
+    inputs[id].addEventListener('blur', function() {
+      this.value = formatNumberWithCommas(this.value);
+      calculate();
+    });
+  });
+
+  // Event Listeners for calculations
   inputs.buyerShare.addEventListener('input', () => {
     updateSellerShare();
     calculate();
@@ -371,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
   Object.keys(inputs).forEach(key => {
     if (key !== 'yearsSincePurchase' && key !== 'residency' && key !== 'sellerShare') {
       inputs[key].addEventListener('input', function() {
-        const value = parseFloat(this.value);
+        const value = parseFormattedNumber(this.value);
         let error = null;
 
         switch (key) {
@@ -382,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
             error = validateOutstandingLoan(value);
             break;
           case 'buyerShare':
-            error = validateBuyerShare(value, parseFloat(inputs.sellerShare.value));
+            error = validateBuyerShare(value, parseFormattedNumber(inputs.sellerShare.value));
             break;
           case 'buyerAge':
             error = validateBuyerAge(value);
