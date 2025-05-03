@@ -552,7 +552,7 @@ input[type="text"]::placeholder {
     padding: 0 10px;
   }
   .results-section {
-    padding: 24px 18px;
+    padding: 24px 1px;
   }
   
   .result-card-header {
@@ -625,9 +625,7 @@ input[type="text"]::placeholder {
     padding: 20px;
   }
 
-  .results-section {
-    padding: 20px;
-  }
+  
 
   .section-title {
     font-size: 18px;
