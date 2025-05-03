@@ -437,3 +437,46 @@ document.addEventListener('DOMContentLoaded', function() {
   updateSellerShare();
   calculate();
 });
+
+// Iframe resizer
+document.addEventListener('DOMContentLoaded', function() {
+  // Function to send height to parent window with extra padding
+  function sendHeight() {
+      // Get the document height and add some extra padding (20px)
+      const height = document.body.scrollHeight + 20;
+      window.parent.postMessage({ type: 'setHeight', height: height }, '*');
+  }
+  
+  // Send height on important events
+  const events = ['load', 'resize', 'input', 'change'];
+  events.forEach(event => {
+      window.addEventListener(event, sendHeight);
+  });
+  
+  // Watch for DOM changes
+  const observer = new MutationObserver(function() {
+      // Small delay to ensure all DOM changes are completed
+      setTimeout(sendHeight, 50);
+  });
+  observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true
+  });
+  
+  // Handle height requests from parent window
+  window.addEventListener('message', function(event) {
+      if (event.data.type === 'requestHeight') {
+          sendHeight();
+      }
+  });
+  
+  // Initial height send with slight delay to ensure full rendering
+  setTimeout(sendHeight, 300);
+  
+  // Also send after all images and assets are loaded
+  window.addEventListener('load', function() {
+      setTimeout(sendHeight, 500);
+  });
+});
