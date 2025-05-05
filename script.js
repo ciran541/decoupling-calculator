@@ -1,4 +1,3 @@
-// Utility Functions
 function formatMoney(amount) {
   const absAmount = Math.abs(amount);
   const formatted = "$" + absAmount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
@@ -61,11 +60,9 @@ function calculateValuationFee(propertyValuation) {
   if (propertyValuation < 1000000) {
     return 300;
   } else if (propertyValuation < 2000000) {
-    return 400;
-  } else if (propertyValuation < 3000000) {
-    return 500;
+    return '$400 est';
   } else {
-    return 500; // Base fee for 3M onwards
+    return '$400 onwards';
   }
 }
 
@@ -102,6 +99,12 @@ function validateCPFUsage(value) {
   return null;
 }
 
+function validateLTV(loan, valuation) {
+  const ltv = (loan / valuation) * 100;
+  if (ltv > 75) return "Loan amount exceeds 75% LTV limit";
+  return null;
+}
+
 // Main Logic
 document.addEventListener('DOMContentLoaded', function() {
   const inputs = {
@@ -121,7 +124,8 @@ document.addEventListener('DOMContentLoaded', function() {
     buyerShare: document.getElementById('buyerShareError'),
     buyerAge: document.getElementById('buyerAgeError'),
     sellerShare: document.getElementById('sellerShareError'),
-    cpfUsage: document.getElementById('cpfUsageError')
+    cpfUsage: document.getElementById('cpfUsageError'),
+    ltv: document.getElementById('ltvError') || document.createElement('div')
   };
 
   const labels = {
@@ -161,12 +165,13 @@ document.addEventListener('DOMContentLoaded', function() {
       validateOutstandingLoan(loan),
       validateBuyerShare(buyerSharePercent, sellerSharePercent),
       validateBuyerAge(age),
-      validateCPFUsage(cpf)
+      validateCPFUsage(cpf),
+      validateLTV(loan, valuation)
     ].filter(error => error);
 
     Object.keys(errors).forEach(key => {
       errors[key].style.display = 'none';
-      labels[key].classList.remove('error');
+      labels[key]?.classList.remove('error');
     });
 
     if (validationErrors.length > 0) {
@@ -203,9 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Render Results with enhanced UI
     const results = document.getElementById('results');
     
-    // Check if all required data is available
     if (!valuation || valuation <= 0) {
-      // Show initial message if calculation hasn't been done yet
       results.innerHTML = `
         <div class="results-header">
           <h2 class="section-title">Decoupling Results</h2>
@@ -227,7 +230,6 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    // Otherwise, show full calculation results
     results.innerHTML = `
       <div class="results-header">
         <h2 class="section-title">Decoupling Results</h2>
@@ -247,20 +249,19 @@ document.addEventListener('DOMContentLoaded', function() {
           
           <div class="result-section">
             <div class="result-row">
-              <span class="result-label">Property Share (${buyerSharePercent}% of Valuation)</span>
+              <span class="result-label">Property Share <span class="support-text">(${buyerSharePercent}% of Valuation)</span></span>
               <span class="result-value">${formatMoney(buyerPropertyShare)}</span>
             </div>
             <div class="result-row">
-              <span class="result-label">Loan Liability (${buyerSharePercent}% of Outstanding Loan)</span>
+              <span class="result-label">Loan Liability <span class="support-text">(${buyerSharePercent}% of Outstanding Loan)</span></span>
               <span class="result-value">${formatMoney(buyerLoanLiability)}</span>
             </div>
-            
           </div>
           
           <div class="result-section">
             <h4 class="result-section-title">Breakdown</h4>
             <div class="result-row highlight">
-              <span class="result-label">Purchase of Property Share</span>
+              <span class="result-label">Purchase of Part Share <span class="support-text">(${sellerSharePercent}% Share)</span></span>
               <span class="result-value primary">${formatMoney(purchasePrice)}</span>
             </div>
             <div class="result-row">
@@ -276,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <span class="result-value">${formatMoney(bankLoan75Percent)}</span>
             </div>
             <div class="result-row">
-              <span class="result-label">New Total Loan<br>(incl. current loan liability)</span>
+              <span class="result-label">New Total Loan<div class="support-text block-support-text">(incl. current loan liability)</div></span>
               <span class="result-value">${formatMoney(newTotalLoan)}</span>
             </div>
             <div class="result-row">
@@ -284,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <span class="result-value">${tenure} years</span>
             </div>
             <div class="result-row highlight">
-              <span class="result-label">Monthly Instalment </span>
+              <span class="result-label">Monthly Instalment<div class="support-text block-support-text">(Using 2.5% p.a reference rate)</div></span>
               <span class="result-value important">${formatMoney(monthlyInstallment)}</span>
             </div>
           </div>
@@ -292,20 +293,20 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="result-section">
             <h4 class="result-section-title">Est. Misc Fees</h4>
             <div class="result-row">
-              <span class="result-label">Buyer's Stamp Duty</span>
+              <span class="result-label">Buyer's Stamp Duty (Cash)</span>
               <span class="result-value">${formatMoney(bsd)}</span>
             </div>
             <div class="result-row">
-              <span class="result-label">Additional Buyer's Stamp Duty</span>
+              <span class="result-label">Additional Buyer's Stamp Duty (Cash)</span>
               <span class="result-value">${formatMoney(absd)}</span>
             </div>
             <div class="result-row">
-              <span class="result-label">Legal Fee</span>
+              <span class="result-label">Legal Fee (Cash/CPF)</span>
               <span class="result-value">${formatMoney(legalFees)} +/-</span>
             </div>
             <div class="result-row">
-              <span class="result-label">Valuation Fee</span>
-              <span class="result-value">${formatMoney(valuationFee)}</span>
+              <span class="result-label">Valuation Fee (Cash)</span>
+              <span class="result-value">${typeof valuationFee === 'number' ? formatMoney(valuationFee) : valuationFee}</span>
             </div>
           </div>
         </div>
@@ -320,11 +321,11 @@ document.addEventListener('DOMContentLoaded', function() {
           
           <div class="result-section">
             <div class="result-row">
-              <span class="result-label">Property Share (${sellerSharePercent}% of Valuation)</span>
+              <span class="result-label">Property Share <span class="support-text">(${sellerSharePercent}% of Valuation)</span></span>
               <span class="result-value">${formatMoney(sellerPropertyShare)}</span>
             </div>
             <div class="result-row">
-              <span class="result-label">Loan Liability (${sellerSharePercent}% of Outstanding Loan)</span>
+              <span class="result-label">Loan Liability <span class="support-text">(${sellerSharePercent}% of Outstanding Loan)</span></span>
               <span class="result-value">${formatMoney(sellerLoanLiability)}</span>
             </div>
           </div>
@@ -340,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <span class="result-value">${formatMoney(sellerLoanLiability)}</span>
             </div>
             <div class="result-row">
-              <span class="result-label">Less: CPF Usage (Refund to OA)</span>
+              <span class="result-label">Less: CPF Usage <span class="support-text">(Refund to OA)</span></span>
               <span class="result-value">${formatMoney(cpf)}</span>
             </div>
             <div class="result-row highlight">
@@ -352,11 +353,11 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="result-section">
             <h4 class="result-section-title">Est. Misc Fees</h4>
             <div class="result-row">
-              <span class="result-label">Seller's Stamp Duty</span>
+              <span class="result-label">Seller's Stamp Duty (Cash)</span>
               <span class="result-value">${formatMoney(ssd)}</span>
             </div>
             <div class="result-row">
-              <span class="result-label">Legal Fee</span>
+              <span class="result-label">Legal Fee (Cash/CPF)</span>
               <span class="result-value">${formatMoney(sellerLegalFees)} +/-</span>
             </div>
           </div>
@@ -372,7 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Event Listeners for formatting inputs
   ['propertyValuation', 'outstandingLoan', 'buyerShare', 'buyerAge', 'cpfUsage'].forEach(id => {
     inputs[id].addEventListener('input', function() {
-      // Allow only numbers and commas
       this.value = this.value.replace(/[^0-9,]/g, '');
       calculate();
     });
@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
             error = validatePropertyValuation(value);
             break;
           case 'outstandingLoan':
-            error = validateOutstandingLoan(value);
+            error = validateOutstandingLoan(value) || validateLTV(value, parseFormattedNumber(inputs.propertyValuation.value));
             break;
           case 'buyerShare':
             error = validateBuyerShare(value, parseFormattedNumber(inputs.sellerShare.value));
@@ -440,43 +440,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Iframe resizer
 document.addEventListener('DOMContentLoaded', function() {
-  // Function to send height to parent window with extra padding
   function sendHeight() {
-      // Get the document height and add some extra padding (20px)
-      const height = document.body.scrollHeight + 20;
-      window.parent.postMessage({ type: 'setHeight', height: height }, '*');
+    const height = document.body.scrollHeight + 20;
+    window.parent.postMessage({ type: 'setHeight', height: height }, '*');
   }
   
-  // Send height on important events
   const events = ['load', 'resize', 'input', 'change'];
   events.forEach(event => {
-      window.addEventListener(event, sendHeight);
+    window.addEventListener(event, sendHeight);
   });
   
-  // Watch for DOM changes
   const observer = new MutationObserver(function() {
-      // Small delay to ensure all DOM changes are completed
-      setTimeout(sendHeight, 50);
+    setTimeout(sendHeight, 50);
   });
   observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      characterData: true
+    childList: true,
+    subtree: true,
+    attributes: true,
+    characterData: true
   });
   
-  // Handle height requests from parent window
   window.addEventListener('message', function(event) {
-      if (event.data.type === 'requestHeight') {
-          sendHeight();
-      }
+    if (event.data.type === 'requestHeight') {
+      sendHeight();
+    }
   });
   
-  // Initial height send with slight delay to ensure full rendering
   setTimeout(sendHeight, 300);
   
-  // Also send after all images and assets are loaded
   window.addEventListener('load', function() {
-      setTimeout(sendHeight, 500);
+    setTimeout(sendHeight, 500);
   });
 });
