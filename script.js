@@ -111,13 +111,28 @@ function validateCPFOaBalance(value) {
   return null;
 }
 
+function validateTotalFinancing(loan, buyerCpfUsage, sellerCpfUsage, valuation) {
+  const totalFinancing = loan + buyerCpfUsage + sellerCpfUsage;
+  const maxAllowedFinancing = valuation * 0.95;
+  
+  if (totalFinancing > maxAllowedFinancing) {
+    return "Total financing (loan + CPF usage) cannot exceed 95% of property valuation";
+  }
+  return null;
+}
+
 // Pie Chart Creation
-function createPieChart(loanPercent, cpfPercent, cashableEquityPercent) {
+function createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuation) {
   // Ensure percentages are rounded to 1 decimal place for display
   // These percentages represent: loan, CPF used for property (NOT legal fees), and cashable equity
   loanPercent = parseFloat(loanPercent.toFixed(1));
   cpfPercent = parseFloat(cpfPercent.toFixed(1));
   cashableEquityPercent = parseFloat(cashableEquityPercent.toFixed(1));
+
+  // Calculate actual dollar values
+  const loanValue = (loanPercent / 100) * valuation;
+  const cpfValue = (cpfPercent / 100) * valuation;
+  const cashableEquityValue = (cashableEquityPercent / 100) * valuation;
 
   // Create canvas element for the chart
   const canvas = document.createElement('canvas');
@@ -136,16 +151,18 @@ function createPieChart(loanPercent, cpfPercent, cashableEquityPercent) {
     type: 'pie',
     data: {
       labels: [
-        `Loan (${loanPercent}%)`, 
-        `CPF (${cpfPercent}%)`, 
-        `Cashable Equity (${cashableEquityPercent}%)`
+        `Cashable Equity (${cashableEquityPercent}% - ${formatMoney(cashableEquityValue)})`,
+        `CPF (${cpfPercent}% - ${formatMoney(cpfValue)})`,
+        `Loan (${loanPercent}% - ${formatMoney(loanValue)})`
       ],
       datasets: [{
-        data: [loanPercent, cpfPercent, cashableEquityPercent],
+        data: [cashableEquityPercent,cpfPercent,loanPercent],
         backgroundColor: [
-          '#052d4a',  // Red for loan
-          '#03a9e7',  // Blue for CPF
-          '#43a047'   // Green for Cashable Equity
+          '#43a047',  // Green for Cashable Equity
+          '#03a9e7',  // Light blue for CPF
+          '#052d4a'  // Dark blue for loan
+          
+          
         ],
         borderWidth: 1
       }]
@@ -169,6 +186,12 @@ function createPieChart(loanPercent, cpfPercent, cashableEquityPercent) {
       }
     }
   });
+  
+  // Update the pie chart note
+  const pieChartNote = document.querySelector('.pie-chart-note');
+  if (pieChartNote) {
+    pieChartNote.innerHTML = `Based on your property valuation of ${formatMoney(valuation)}.`;
+  }
 }
 
 // Main Logic
@@ -251,7 +274,8 @@ document.addEventListener('DOMContentLoaded', function() {
       validateCPFUsage(cpf),
       validateCPFUsage(buyerCpfUsage),
       validateCPFOaBalance(buyerCpfOaBalance),
-      validateLTV(loan, valuation)
+      validateLTV(loan, valuation),
+      validateTotalFinancing(loan, buyerCpfUsage, cpf, valuation) // Add this new validation
     ].filter(error => error);
 
     Object.keys(errors).forEach(key => {
@@ -425,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <h4 class="result-section-title">SUMMARY</h4>
             <div class="result-row highlight">
               <span class="result-label">Total Cash Required</span>
-              <span class="result-value important">${formatMoney(totalCashRequiredWithLegal)}</span>
+              <span class="result-value important">${formatMoney(totalCashRequiredWithLegal)} est</span>
             </div>
             <div class="result-row">
               <span class="result-label">CPF Used for Downpayment</span>
@@ -438,10 +462,10 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
           
           <div class="result-section">
-            <h4 class="result-section-title">Equity Breakdown</h4>
+            <h4 class="result-section-title">SINGLE OWNERSHIP STRUCTURE</h4>
             <div id="pieChartContainer" class="pie-chart-container" style="height: 300px; width: 100%; margin: 20px 0;"></div>
             <div class="pie-chart-note" style="font-size: 12px; color: #666; text-align: center; margin-top: -10px;">
-              Note: CPF used for legal fees is not included in this breakdown
+              Based on your property valuation of ${formatMoney(valuation)}.
             </div>
           </div>
         </div>
@@ -507,12 +531,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create pie chart after DOM is updated
     setTimeout(() => {
       if (typeof Chart !== 'undefined') {
-        createPieChart(loanPercent, cpfPercent, cashableEquityPercent);
+        createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuation);
       } else {
         // If Chart.js isn't loaded yet, wait a bit more
         setTimeout(() => {
           if (typeof Chart !== 'undefined') {
-            createPieChart(loanPercent, cpfPercent, cashableEquityPercent);
+            createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuation);
           }
         }, 1000);
       }
