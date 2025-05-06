@@ -121,30 +121,29 @@ function validateTotalFinancing(loan, buyerCpfUsage, sellerCpfUsage, valuation) 
   return null;
 }
 
-// Pie Chart Creation
 function createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuation) {
   // Ensure percentages are rounded to 1 decimal place for display
   // These percentages represent: loan, CPF used for property (NOT legal fees), and cashable equity
   loanPercent = parseFloat(loanPercent.toFixed(1));
   cpfPercent = parseFloat(cpfPercent.toFixed(1));
   cashableEquityPercent = parseFloat(cashableEquityPercent.toFixed(1));
-
+  
   // Calculate actual dollar values
   const loanValue = (loanPercent / 100) * valuation;
   const cpfValue = (cpfPercent / 100) * valuation;
   const cashableEquityValue = (cashableEquityPercent / 100) * valuation;
-
+  
   // Create canvas element for the chart
   const canvas = document.createElement('canvas');
   canvas.id = 'buyerPieChart';
   canvas.width = 300;
   canvas.height = 300;
-  
+    
   // Append canvas to the container
   const chartContainer = document.getElementById('pieChartContainer');
   chartContainer.innerHTML = '';
   chartContainer.appendChild(canvas);
-  
+    
   // Create the chart
   const ctx = canvas.getContext('2d');
   new Chart(ctx, {
@@ -156,13 +155,11 @@ function createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuatio
         `Loan (${loanPercent}% - ${formatMoney(loanValue)})`
       ],
       datasets: [{
-        data: [cashableEquityPercent,cpfPercent,loanPercent],
+        data: [cashableEquityPercent, cpfPercent, loanPercent],
         backgroundColor: [
           '#43a047',  // Green for Cashable Equity
           '#03a9e7',  // Light blue for CPF
-          '#052d4a'  // Dark blue for loan
-          
-          
+          '#052d4a'   // Dark blue for loan                               
         ],
         borderWidth: 1
       }]
@@ -172,10 +169,15 @@ function createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuatio
       maintainAspectRatio: false,
       legend: {
         position: 'bottom',
+        align: 'start',
         labels: {
           fontSize: 14,
-          padding: 20
-        }
+          padding: 20,
+          boxWidth: 15
+        },
+        display: true,
+        // This is the key change - forces stacking by limiting width
+        maxWidth: 240
       },
       tooltips: {
         callbacks: {
@@ -186,7 +188,7 @@ function createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuatio
       }
     }
   });
-  
+    
   // Update the pie chart note
   const pieChartNote = document.querySelector('.pie-chart-note');
   if (pieChartNote) {
