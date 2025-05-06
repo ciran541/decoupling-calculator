@@ -93,20 +93,93 @@ function validateBuyerAge(value) {
   return null;
 }
 
-function validateCPFUsage(value) {
-  if (isNaN(value)) return "Please enter a valid amount";
-  if (value < 0) return "CPF usage cannot be negative";
-  return null;
-}
-
 function validateLTV(loan, valuation) {
   const ltv = (loan / valuation) * 100;
   if (ltv > 75) return "Loan amount exceeds 75% LTV limit";
   return null;
 }
 
+function validateCPFUsage(value) {
+  if (isNaN(value)) return "Please enter a valid amount";
+  if (value < 0) return "CPF usage cannot be negative";
+  return null;
+}
+
+function validateCPFOaBalance(value) {
+  if (isNaN(value)) return "Please enter a valid amount";
+  if (value < 0) return "CPF OA Balance cannot be negative";
+  return null;
+}
+
+// Pie Chart Creation
+function createPieChart(loanPercent, cpfPercent, cashableEquityPercent) {
+  // Ensure percentages are rounded to 1 decimal place for display
+  // These percentages represent: loan, CPF used for property (NOT legal fees), and cashable equity
+  loanPercent = parseFloat(loanPercent.toFixed(1));
+  cpfPercent = parseFloat(cpfPercent.toFixed(1));
+  cashableEquityPercent = parseFloat(cashableEquityPercent.toFixed(1));
+
+  // Create canvas element for the chart
+  const canvas = document.createElement('canvas');
+  canvas.id = 'buyerPieChart';
+  canvas.width = 300;
+  canvas.height = 300;
+  
+  // Append canvas to the container
+  const chartContainer = document.getElementById('pieChartContainer');
+  chartContainer.innerHTML = '';
+  chartContainer.appendChild(canvas);
+  
+  // Create the chart
+  const ctx = canvas.getContext('2d');
+  new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: [
+        `Loan (${loanPercent}%)`, 
+        `CPF (${cpfPercent}%)`, 
+        `Cashable Equity (${cashableEquityPercent}%)`
+      ],
+      datasets: [{
+        data: [loanPercent, cpfPercent, cashableEquityPercent],
+        backgroundColor: [
+          '#052d4a',  // Red for loan
+          '#03a9e7',  // Blue for CPF
+          '#43a047'   // Green for Cashable Equity
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      legend: {
+        position: 'bottom',
+        labels: {
+          fontSize: 14,
+          padding: 20
+        }
+      },
+      tooltips: {
+        callbacks: {
+          label: function(tooltipItem, data) {
+            return data.labels[tooltipItem.index];
+          }
+        }
+      }
+    }
+  });
+}
+
 // Main Logic
 document.addEventListener('DOMContentLoaded', function() {
+  // Load Chart.js if not already loaded
+  if (typeof Chart === 'undefined') {
+    const chartScript = document.createElement('script');
+    chartScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js';
+    document.head.appendChild(chartScript);
+  }
+
   const inputs = {
     propertyValuation: document.getElementById('propertyValuation'),
     outstandingLoan: document.getElementById('outstandingLoan'),
@@ -115,7 +188,9 @@ document.addEventListener('DOMContentLoaded', function() {
     residency: document.querySelector('input[name="residency"]:checked'),
     buyerAge: document.getElementById('buyerAge'),
     sellerShare: document.getElementById('sellerShare'),
-    cpfUsage: document.getElementById('cpfUsage')
+    cpfUsage: document.getElementById('cpfUsage'),
+    buyerCpfUsage: document.getElementById('buyerCpfUsage'),
+    buyerCpfOaBalance: document.getElementById('buyerCpfOaBalance')
   };
 
   const errors = {
@@ -125,6 +200,8 @@ document.addEventListener('DOMContentLoaded', function() {
     buyerAge: document.getElementById('buyerAgeError'),
     sellerShare: document.getElementById('sellerShareError'),
     cpfUsage: document.getElementById('cpfUsageError'),
+    buyerCpfUsage: document.getElementById('buyerCpfUsageError'),
+    buyerCpfOaBalance: document.getElementById('buyerCpfOaBalanceError'),
     ltv: document.getElementById('ltvError') || document.createElement('div')
   };
 
@@ -134,12 +211,16 @@ document.addEventListener('DOMContentLoaded', function() {
     buyerShare: document.querySelector('label[for="buyerShare"]'),
     buyerAge: document.querySelector('label[for="buyerAge"]'),
     sellerShare: document.querySelector('label[for="sellerShare"]'),
-    cpfUsage: document.querySelector('label[for="cpfUsage"]')
+    cpfUsage: document.querySelector('label[for="cpfUsage"]'),
+    buyerCpfUsage: document.querySelector('label[for="buyerCpfUsage"]'),
+    buyerCpfOaBalance: document.querySelector('label[for="buyerCpfOaBalance"]')
   };
 
   // Format input fields on load
-  ['propertyValuation', 'outstandingLoan', 'buyerShare', 'buyerAge', 'cpfUsage'].forEach(id => {
-    inputs[id].value = formatNumberWithCommas(inputs[id].value);
+  ['propertyValuation', 'outstandingLoan', 'buyerShare', 'buyerAge', 'cpfUsage', 'buyerCpfUsage', 'buyerCpfOaBalance'].forEach(id => {
+    if (inputs[id]) {
+      inputs[id].value = formatNumberWithCommas(inputs[id].value);
+    }
   });
 
   function updateSellerShare() {
@@ -158,6 +239,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const residency = document.querySelector('input[name="residency"]:checked').value;
     const age = parseFormattedNumber(inputs.buyerAge.value);
     const cpf = parseFormattedNumber(inputs.cpfUsage.value);
+    const buyerCpfUsage = parseFormattedNumber(inputs.buyerCpfUsage.value);
+    const buyerCpfOaBalance = parseFormattedNumber(inputs.buyerCpfOaBalance.value);
 
     // Validate inputs
     const validationErrors = [
@@ -166,12 +249,16 @@ document.addEventListener('DOMContentLoaded', function() {
       validateBuyerShare(buyerSharePercent, sellerSharePercent),
       validateBuyerAge(age),
       validateCPFUsage(cpf),
+      validateCPFUsage(buyerCpfUsage),
+      validateCPFOaBalance(buyerCpfOaBalance),
       validateLTV(loan, valuation)
     ].filter(error => error);
 
     Object.keys(errors).forEach(key => {
-      errors[key].style.display = 'none';
-      labels[key]?.classList.remove('error');
+      if (errors[key]) {
+        errors[key].style.display = 'none';
+        labels[key]?.classList.remove('error');
+      }
     });
 
     if (validationErrors.length > 0) {
@@ -196,6 +283,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const absd = calculateABSD(purchasePrice, residency);
     const legalFees = 3000;
     const valuationFee = calculateValuationFee(valuation);
+
+    // Calculate how much CPF can be used for downpayment
+    const cpfNeeded = cashCPF20Percent;
+    const cpfUsedForDownpayment = Math.min(buyerCpfOaBalance, cpfNeeded);
+    const cashTopupForDownpayment = cpfNeeded - cpfUsedForDownpayment;
+    
+    // Calculate total cash required
+    const totalCashRequired = cash5Percent + cashTopupForDownpayment + bsd + absd + 
+                             (typeof valuationFee === 'number' ? valuationFee : 400); // Estimated valuation fee
+    
+    // Calculate CPF usage for legal fees
+    const cpfRemainingAfterDownpayment = buyerCpfOaBalance - cpfUsedForDownpayment;
+    const cpfUsedForLegalFees = Math.min(cpfRemainingAfterDownpayment, legalFees);
+    const cashTopupForLegalFees = legalFees - cpfUsedForLegalFees;
+    
+    // Add legal fees to total cash required if not enough CPF
+    const totalCashRequiredWithLegal = totalCashRequired + cashTopupForLegalFees;
+
+    // Calculate percentages for pie chart
+    // Note: CPF for legal fees is NOT included in the pie chart calculation
+    const loanPercent = (newTotalLoan / valuation) * 100;
+    const totalCpfUsed = buyerCpfUsage + cpfUsedForDownpayment; // Only CPF used towards property
+    const cpfPercent = (totalCpfUsed / valuation) * 100;
+    const cashableEquityPercent = 100 - loanPercent - cpfPercent;
 
     // Seller Calculations
     const sellerPropertyShare = valuation * sellerShare;
@@ -309,6 +420,30 @@ document.addEventListener('DOMContentLoaded', function() {
               <span class="result-value">${typeof valuationFee === 'number' ? formatMoney(valuationFee) : valuationFee}</span>
             </div>
           </div>
+          
+          <div class="result-section">
+            <h4 class="result-section-title">SUMMARY</h4>
+            <div class="result-row highlight">
+              <span class="result-label">Total Cash Required</span>
+              <span class="result-value important">${formatMoney(totalCashRequiredWithLegal)}</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">CPF Used for Downpayment</span>
+              <span class="result-value">${formatMoney(cpfUsedForDownpayment)}</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">CPF Used for Legal Fees</span>
+              <span class="result-value">${formatMoney(cpfUsedForLegalFees)}</span>
+            </div>
+          </div>
+          
+          <div class="result-section">
+            <h4 class="result-section-title">Equity Breakdown</h4>
+            <div id="pieChartContainer" class="pie-chart-container" style="height: 300px; width: 100%; margin: 20px 0;"></div>
+            <div class="pie-chart-note" style="font-size: 12px; color: #666; text-align: center; margin-top: -10px;">
+              Note: CPF used for legal fees is not included in this breakdown
+            </div>
+          </div>
         </div>
         
         <div class="result-card seller-card">
@@ -368,28 +503,48 @@ document.addEventListener('DOMContentLoaded', function() {
         <strong>Disclaimer from TLC:</strong> Figures provided on this page are for illustration purposes and do not constitute as a formal approval from a bank.
       </div>
     `;
+    
+    // Create pie chart after DOM is updated
+    setTimeout(() => {
+      if (typeof Chart !== 'undefined') {
+        createPieChart(loanPercent, cpfPercent, cashableEquityPercent);
+      } else {
+        // If Chart.js isn't loaded yet, wait a bit more
+        setTimeout(() => {
+          if (typeof Chart !== 'undefined') {
+            createPieChart(loanPercent, cpfPercent, cashableEquityPercent);
+          }
+        }, 1000);
+      }
+    }, 100);
   }
 
   // Event Listeners for formatting inputs
-  ['propertyValuation', 'outstandingLoan', 'buyerShare', 'buyerAge', 'cpfUsage'].forEach(id => {
-    inputs[id].addEventListener('input', function() {
-      this.value = this.value.replace(/[^0-9,]/g, '');
-      calculate();
-    });
-    inputs[id].addEventListener('blur', function() {
-      this.value = formatNumberWithCommas(this.value);
-      calculate();
-    });
+  ['propertyValuation', 'outstandingLoan', 'buyerShare', 'buyerAge', 'cpfUsage', 'buyerCpfUsage', 'buyerCpfOaBalance'].forEach(id => {
+    if (inputs[id]) {
+      inputs[id].addEventListener('input', function() {
+        this.value = this.value.replace(/[^0-9,]/g, '');
+        calculate();
+      });
+      inputs[id].addEventListener('blur', function() {
+        this.value = formatNumberWithCommas(this.value);
+        calculate();
+      });
+    }
   });
 
   // Event Listeners for calculations
-  inputs.buyerShare.addEventListener('input', () => {
-    updateSellerShare();
-    calculate();
-  });
+  if (inputs.buyerShare) {
+    inputs.buyerShare.addEventListener('input', () => {
+      updateSellerShare();
+      calculate();
+    });
+  }
 
-  ['propertyValuation', 'outstandingLoan', 'yearsSincePurchase', 'buyerAge', 'cpfUsage'].forEach(id => {
-    inputs[id].addEventListener('input', calculate);
+  ['propertyValuation', 'outstandingLoan', 'yearsSincePurchase', 'buyerAge', 'cpfUsage', 'buyerCpfUsage', 'buyerCpfOaBalance'].forEach(id => {
+    if (inputs[id]) {
+      inputs[id].addEventListener('input', calculate);
+    }
   });
 
   document.querySelectorAll('input[name="residency"]').forEach(radio => {
@@ -398,7 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Input Validation
   Object.keys(inputs).forEach(key => {
-    if (key !== 'yearsSincePurchase' && key !== 'residency' && key !== 'sellerShare') {
+    if (inputs[key] && key !== 'yearsSincePurchase' && key !== 'residency' && key !== 'sellerShare') {
       inputs[key].addEventListener('input', function() {
         const value = parseFormattedNumber(this.value);
         let error = null;
@@ -419,15 +574,21 @@ document.addEventListener('DOMContentLoaded', function() {
           case 'cpfUsage':
             error = validateCPFUsage(value);
             break;
+          case 'buyerCpfUsage':
+            error = validateCPFUsage(value);
+            break;
+          case 'buyerCpfOaBalance':
+            error = validateCPFOaBalance(value);
+            break;
         }
 
-        if (error) {
+        if (error && errors[key]) {
           errors[key].textContent = error;
           errors[key].style.display = 'block';
-          labels[key].classList.add('error');
-        } else {
+          labels[key]?.classList.add('error');
+        } else if (errors[key]) {
           errors[key].style.display = 'none';
-          labels[key].classList.remove('error');
+          labels[key]?.classList.remove('error');
         }
       });
     }
@@ -437,7 +598,6 @@ document.addEventListener('DOMContentLoaded', function() {
   updateSellerShare();
   calculate();
 });
-
 // Iframe resizer
 document.addEventListener('DOMContentLoaded', function() {
   function sendHeight() {

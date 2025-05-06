@@ -58,6 +58,25 @@
                   </div>
                   <div class="field-error" id="buyerShareError"></div>
                 </div>
+                
+                <div class="input-group">
+                  <label class="input-label" for="buyerCpfUsage">CPF Usage (incl. accrued interest)</label>
+                  <div class="input-container">
+                    <div class="input-icon">SGD</div>
+                    <input type="text" id="buyerCpfUsage" value="100,000" min="0">
+                  </div>
+                  <div class="field-error" id="buyerCpfUsageError"></div>
+                </div>
+                
+                <div class="input-group">
+                  <label class="input-label" for="buyerCpfOaBalance">CPF OA Balance</label>
+                  <div class="input-container">
+                    <div class="input-icon">SGD</div>
+                    <input type="text" id="buyerCpfOaBalance" value="100,000" min="0">
+                  </div>
+                  <div class="field-error" id="buyerCpfOaBalanceError"></div>
+                </div>
+                
                 <div class="input-group">
                   <label class="input-label" for="buyerAge">Age</label>
                   <div class="input-container">
@@ -93,7 +112,7 @@
                   <label class="input-label" for="sellerShare">Shareholding %</label>
                   <div class="input-container">
                     <div class="input-icon">%</div>
-                    <input type="text" id="sellerShare" value="40" min="1" max="99" readonly>
+                    <input type="text" id="sellerShare" value="50" min="1" max="99">
                   </div>
                   <div class="field-error" id="sellerShareError"></div>
                 </div>
@@ -102,7 +121,7 @@
                   <label class="input-label" for="cpfUsage">CPF Usage (incl. accrued interest)</label>
                   <div class="input-container">
                     <div class="input-icon">SGD</div>
-                    <input type="text" id="cpfUsage" value="200,000" min="0">
+                    <input type="text" id="cpfUsage" value="100,000" min="0">
                   </div>
                   <div class="field-error" id="cpfUsageError"></div>
                 </div>
