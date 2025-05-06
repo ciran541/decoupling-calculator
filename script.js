@@ -1,6 +1,6 @@
 function formatMoney(amount) {
   const absAmount = Math.abs(amount);
-  const formatted = "$" + absAmount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+  const formatted = "$" + Math.round(absAmount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return amount < 0 ? "-" + formatted : formatted;
 }
 
