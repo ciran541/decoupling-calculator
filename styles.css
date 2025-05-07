@@ -738,3 +738,9 @@ input[type="radio"]:active {
   font-weight: normal;
   margin-left: 4px;
 }
+
+.result-label .support-text-lo {
+  color: #052d4a;
+  font-size: 0.95em;
+  font-weight: normal;
+}

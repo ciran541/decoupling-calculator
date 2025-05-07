@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <span class="result-value">${formatMoney(buyerPropertyShare)}</span>
             </div>
             <div class="result-row">
-              <span class="result-label">Loan Liability <span class="support-text">(${buyerSharePercent}% of Outstanding Loan)</span></span>
+              <span class="result-label">Loan Liability <span class="support-text">(${buyerSharePercent}% of Outstanding Loan)</span><div class="support-text-lo block-support-text">-Applicable to non-borrower</div></span>
               <span class="result-value">${formatMoney(buyerLoanLiability)}</span>
             </div>
           </div>
@@ -486,7 +486,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <span class="result-value">${formatMoney(sellerPropertyShare)}</span>
             </div>
             <div class="result-row">
-              <span class="result-label">Loan Liability <span class="support-text">(${sellerSharePercent}% of Outstanding Loan)</span></span>
+              <span class="result-label">Loan Liability <span class="support-text">(${sellerSharePercent}% of Outstanding Loan)</span><div class="support-text-lo block-support-text">-Applicable to non-borrower</div></span>
               <span class="result-value">${formatMoney(sellerLoanLiability)}</span>
             </div>
           </div>
@@ -499,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <div class="result-row">
               <span class="result-label">Less: Loan Liability</span>
-              <span class="result-value">${formatMoney(sellerLoanLiability)}</span>
+              <span class="result-value">${formatMoney(sellerLoanLiability)}</span> 
             </div>
             <div class="result-row">
               <span class="result-label">Less: CPF Usage <span class="support-text">(Refund to OA)</span></span>
