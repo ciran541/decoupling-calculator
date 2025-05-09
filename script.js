@@ -6,7 +6,9 @@ function formatMoney(amount) {
 
 function formatNumberWithCommas(value) {
   if (!value) return "";
-  const number = parseFloat(value.replace(/,/g, ""));
+  // Remove all non-digits
+  const cleanedValue = value.replace(/[^0-9]/g, '');
+  const number = parseFloat(cleanedValue);
   if (isNaN(number)) return value;
   return number.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
@@ -252,6 +254,12 @@ document.addEventListener('DOMContentLoaded', function() {
     interestRate: document.querySelector('label[for="interestRate"]')
   };
 
+  // Make sellerShare input read-only
+  if (inputs.sellerShare) {
+    inputs.sellerShare.readOnly = true;
+    inputs.sellerShare.style.backgroundColor = '#f0f0f0'; // Visual cue for read-only
+  }
+
   // Store interest rate state
   let interestRateValue = 2.5;
 
@@ -264,7 +272,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function updateSellerShare() {
     const buyerShare = parseFormattedNumber(inputs.buyerShare.value);
-    inputs.sellerShare.value = formatNumberWithCommas((100 - buyerShare).toFixed(0));
+    const cappedBuyerShare = Math.min(buyerShare, 99); // Cap at 99
+    inputs.buyerShare.value = formatNumberWithCommas(cappedBuyerShare.toFixed(0));
+    inputs.sellerShare.value = formatNumberWithCommas((100 - cappedBuyerShare).toFixed(0));
   }
 
   function calculate() {
@@ -548,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
       
       <div class="disclaimer">
-        <strong>Disclaimer from TLC:</strong> Figures provided on this page are for illustration purposes and do not constitute as  as a formal approval from a bank.
+        <strong>Disclaimer from TLC:</strong> Figures provided on this page are for illustration purposes and do not constitute as a formal approval from a bank.
       </div>
     `;
     
@@ -607,19 +617,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Event Listeners for formatting inputs
-  ['propertyValuation', 'outstandingLoan', 'buyerShare', 'buyerAge', 'cpfUsage', 'buyerCpfUsage', 'buyerCpfOaBalance'].forEach(id => {
+  // Event Listeners for real-time formatting
+  ['propertyValuation', 'outstandingLoan', 'buyerAge', 'cpfUsage', 'buyerCpfUsage', 'buyerCpfOaBalance'].forEach(id => {
     if (inputs[id]) {
       inputs[id].addEventListener('input', function() {
-        this.value = this.value.replace(/[^0-9,]/g, '');
-        calculate();
-      });
-      inputs[id].addEventListener('blur', function() {
-        this.value = formatNumberWithCommas(this.value);
+        const rawValue = this.value.replace(/[^0-9]/g, '');
+        this.value = formatNumberWithCommas(rawValue);
         calculate();
       });
     }
   });
+
+  // Special handling for buyerShare to maintain percentage formatting and cap at 99
+  if (inputs.buyerShare) {
+    inputs.buyerShare.addEventListener('input', function() {
+      const rawValue = this.value.replace(/[^0-9]/g, '');
+      const cappedValue = Math.min(parseFloat(rawValue) || 0, 99);
+      this.value = formatNumberWithCommas(cappedValue.toFixed(0));
+      updateSellerShare();
+      calculate();
+    });
+  }
 
   // Event Listeners for calculations
   if (inputs.buyerShare) {
