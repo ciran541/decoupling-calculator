@@ -503,7 +503,7 @@ input[type="text"]::placeholder {
   margin-top: 30px;
   padding: 15px 20px;
   background-color: #f8f9fa;
-  border-left: 4px solid #fdc500;
+  
   border-radius: 8px;
   font-size: 13px;
   color: #555;
