@@ -474,73 +474,88 @@ class IpaModal {
             }
 
             try {
-              // Get the chart instance
-              let chartInstance = null;
-              
-              // Try different methods to get chart instance
-              if (typeof Chart.getChart === 'function') {
-                chartInstance = Chart.getChart(originalChart);
-              } else if (originalChart.chart) {
-                chartInstance = originalChart.chart;
-              } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
-                chartInstance = Chart.instances[Object.keys(Chart.instances)[0]];
+              // Create a new canvas for capturing
+              const captureCanvas = document.createElement('canvas');
+              captureCanvas.width = originalChart.width;
+              captureCanvas.height = originalChart.height;
+              const ctx = captureCanvas.getContext('2d');
+
+              // Draw the original canvas content to the capture canvas
+              ctx.drawImage(originalChart, 0, 0);
+
+              // Create image from the capture canvas
+              const img = document.createElement('img');
+              img.src = captureCanvas.toDataURL('image/png');
+              img.style.width = '100%';
+              img.style.height = 'auto';
+              img.style.display = 'block';
+              img.style.margin = '0 auto';
+
+              // Replace the canvas in the clone
+              const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+              if (clonedCanvas) {
+                // Create a container for the image
+                const container = document.createElement('div');
+                container.style.width = '100%';
+                container.style.textAlign = 'center';
+                container.appendChild(img);
+                
+                // Replace the canvas with the container
+                clonedCanvas.parentNode.replaceChild(container, clonedCanvas);
               }
 
-              if (chartInstance) {
-                // Wait for chart to be fully rendered
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-                // Get the chart image
-                const chartImage = chartInstance.toBase64Image();
-                
-                // Replace canvas with image in the clone
-                const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
-                if (clonedCanvas) {
-                  const img = document.createElement('img');
-                  img.src = chartImage;
-                  img.style.width = '100%';
-                  img.style.height = 'auto';
-                  img.style.display = 'block';
-                  clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+              // Wait for the image to load
+              await new Promise(resolve => {
+                if (img.complete) {
+                  resolve();
+                } else {
+                  img.onload = resolve;
+                  img.onerror = resolve;
                 }
-              } else {
-                // Fallback: try to capture canvas directly
-                const img = document.createElement('img');
-                img.src = originalChart.toDataURL('image/png');
-                img.style.width = '100%';
-                img.style.height = 'auto';
-                img.style.display = 'block';
-                const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
-                if (clonedCanvas) {
-                  clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
-                }
-              }
+              });
+
             } catch (error) {
               console.warn('Chart capture failed:', error);
-              // Fallback: try to capture canvas directly
+              // If capture fails, try to get the chart instance
               try {
-                const img = document.createElement('img');
-                img.src = originalChart.toDataURL('image/png');
-                img.style.width = '100%';
-                img.style.height = 'auto';
-                img.style.display = 'block';
-                const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
-                if (clonedCanvas) {
-                  clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+                let chartInstance = null;
+                
+                // Try different methods to get chart instance
+                if (typeof Chart.getChart === 'function') {
+                  chartInstance = Chart.getChart(originalChart);
+                } else if (originalChart.chart) {
+                  chartInstance = originalChart.chart;
+                } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
+                  chartInstance = Chart.instances[Object.keys(Chart.instances)[0]];
                 }
-              } catch (canvasError) {
-                console.error('Canvas capture failed:', canvasError);
+
+                if (chartInstance) {
+                  const chartImage = chartInstance.toBase64Image();
+                  const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+                  if (clonedCanvas) {
+                    const img = document.createElement('img');
+                    img.src = chartImage;
+                    img.style.width = '100%';
+                    img.style.height = 'auto';
+                    img.style.display = 'block';
+                    img.style.margin = '0 auto';
+                    clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+                  }
+                }
+              } catch (fallbackError) {
+                console.error('Fallback capture failed:', fallbackError);
               }
             }
             resolve();
           });
         };
 
-        // Wait for Chart.js to be ready
+        // Wait for Chart.js to be ready and chart to be rendered
         const waitForChart = () => {
           return new Promise((resolve) => {
             if (typeof Chart !== 'undefined') {
-              resolve();
+              // Add a small delay to ensure chart is rendered
+              setTimeout(resolve, 500);
             } else {
               setTimeout(() => waitForChart().then(resolve), 100);
             }
@@ -568,7 +583,7 @@ class IpaModal {
               resolve();
             } else {
               chartImg.onload = resolve;
-              chartImg.onerror = resolve; // resolve even if image fails to load
+              chartImg.onerror = resolve;
             }
           });
         }
