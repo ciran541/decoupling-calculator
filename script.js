@@ -338,22 +338,47 @@ class IpaModal {
   }
 
   getDecouplingDetails() {
-    return {
-      name: document.getElementById('name').value,
-      email: document.getElementById('emailAddress').value,
-      mobile: document.getElementById('mobileNumber').value,
+    const inputs = {
       propertyValuation: document.getElementById('propertyValuation').value,
       outstandingLoan: document.getElementById('outstandingLoan').value,
       yearsSincePurchase: document.getElementById('yearsSincePurchase').value,
       buyerShare: document.getElementById('buyerShare').value,
       sellerShare: document.getElementById('sellerShare').value,
-      residency: document.querySelector('input[name="residency"]:checked')?.value || '',
+      residency: document.querySelector('input[name="residency"]:checked').value,
       buyerAge: document.getElementById('buyerAge').value,
       cpfUsage: document.getElementById('cpfUsage').value,
       buyerCpfUsage: document.getElementById('buyerCpfUsage').value,
       buyerCpfOaBalance: document.getElementById('buyerCpfOaBalance').value,
       interestRate: document.getElementById('interestRateInput')?.value || '2.5'
     };
+
+    const results = {
+      buyerPropertyShare: document.querySelector('.buyer-card .result-row:nth-child(1) .result-value')?.textContent || '-',
+      buyerLoanLiability: document.querySelector('.buyer-card .result-row:nth-child(2) .result-value')?.textContent || '-',
+      purchasePrice: document.querySelector('.buyer-card .result-row.highlight:nth-child(1) .result-value')?.textContent || '-',
+      cash5Percent: document.querySelector('.buyer-card .result-row:nth-child(2) .result-value')?.textContent || '-',
+      cashCPF20Percent: document.querySelector('.buyer-card .result-row:nth-child(3) .result-value')?.textContent || '-',
+      bankLoan75Percent: document.querySelector('.buyer-card .result-row:nth-child(4) .result-value')?.textContent || '-',
+      newTotalLoan: document.querySelector('.buyer-card .result-row:nth-child(5) .result-value')?.textContent || '-',
+      tenure: document.querySelector('.buyer-card .result-row:nth-child(6) .result-value')?.textContent || '-',
+      monthlyInstallment: document.querySelector('.buyer-card .result-row.highlight:nth-child(2) .result-value')?.textContent || '-',
+      bsd: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(1) .result-value')?.textContent || '-',
+      absd: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(2) .result-value')?.textContent || '-',
+      legalFees: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(3) .result-value')?.textContent || '-',
+      valuationFee: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(4) .result-value')?.textContent || '-',
+      totalCashRequired: document.querySelector('.buyer-card .result-section:nth-child(4) .result-row:nth-child(1) .result-value')?.textContent || '-',
+      cpfUsedForDownpayment: document.querySelector('.buyer-card .result-section:nth-child(4) .result-row:nth-child(2) .result-value')?.textContent || '-',
+      cpfUsedForLegalFees: document.querySelector('.buyer-card .result-section:nth-child(4) .result-row:nth-child(3) .result-value')?.textContent || '-',
+      sellerPropertyShare: document.querySelector('.seller-card .result-row:nth-child(1) .result-value')?.textContent || '-',
+      sellerLoanLiability: document.querySelector('.seller-card .result-row:nth-child(2) .result-value')?.textContent || '-',
+      sellingPrice: document.querySelector('.seller-card .result-section:nth-child(2) .result-row:nth-child(1) .result-value')?.textContent || '-',
+      sellerCpfUsage: document.querySelector('.seller-card .result-section:nth-child(2) .result-row:nth-child(3) .result-value')?.textContent || '-',
+      cashProceeds: document.querySelector('.seller-card .result-section:nth-child(2) .result-row:nth-child(4) .result-value')?.textContent || '-',
+      ssd: document.querySelector('.seller-card .result-section:nth-child(3) .result-row:nth-child(1) .result-value')?.textContent || '-',
+      sellerLegalFees: document.querySelector('.seller-card .result-section:nth-child(3) .result-row:nth-child(2) .result-value')?.textContent || '-'
+    };
+
+    return { ...inputs, ...results };
   }
 
   showNotification(type = 'success', title = 'Success!', message = 'Thank you! Your report is being processed and will arrive in your email shortly.') {
@@ -416,33 +441,11 @@ class IpaModal {
         const decouplingDetails = this.getDecouplingDetails();
         const userName = formData.get('name');
         const userEmail = formData.get('emailAddress');
-
-        // Preload images to avoid CORS issues
-        const imageUrls = [
-          'https://theloanconnection.com.sg/wp-content/uploads/2025/02/TLC-Square.png',
-          'https://theloanconnection.com.sg/wp-content/uploads/2025/04/stamp_duty_icon.png'
-        ];
-        await Promise.all(imageUrls.map(url => new Promise((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.src = url;
-          img.onload = resolve;
-          img.onerror = () => {
-            console.warn(`Failed to preload image: ${url}`);
-            resolve(); // Continue even if image fails
-          };
-        })));
-
+        
         // Create temporary container
         const captureContainer = document.createElement('div');
         captureContainer.className = 'pdf-capture-container';
-        captureContainer.style.position = 'absolute';
-        captureContainer.style.left = '-9999px'; // Render off-screen
-        captureContainer.style.width = '800px';
-        captureContainer.style.background = '#ffffff';
-        captureContainer.style.padding = '20px';
-        captureContainer.style.boxSizing = 'border-box';
-
+        
         captureContainer.innerHTML = `
           <div class="pdf-header">
             <div class="company-info">
@@ -459,221 +462,149 @@ class IpaModal {
 
         // Clone results section
         const resultsSection = document.querySelector('.results-section');
-        if (!resultsSection) {
-          throw new Error('Results section not found');
-        }
         const resultsClone = resultsSection.cloneNode(true);
 
-        // Ensure cloned content is visible
-        resultsClone.style.display = 'block';
-        resultsClone.style.visibility = 'visible';
-
-        // Function to capture chart as image with retries
-        const captureChart = (chartId, maxRetries = 3, retryDelay = 1000) => {
+        // Function to capture chart as image
+        const captureChart = (chartId) => {
           return new Promise(async (resolve) => {
             const originalChart = document.getElementById(chartId);
             if (!originalChart) {
-              console.warn(`Chart ${chartId} not found`);
               resolve();
               return;
             }
 
-            let attempt = 0;
-            const tryCapture = async () => {
-              try {
-                // Force chart re-render
-                let chartInstance = null;
-                if (typeof Chart.getChart === 'function') {
-                  chartInstance = Chart.getChart(originalChart);
-                } else if (originalChart.chart) {
-                  chartInstance = originalChart.chart;
-                } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
-                  chartInstance = Chart.instances[Object.keys(Chart.instances)[0]];
-                }
+            try {
+              // Get the chart instance
+              let chartInstance = null;
+              
+              // Try different methods to get chart instance
+              if (typeof Chart.getChart === 'function') {
+                chartInstance = Chart.getChart(originalChart);
+              } else if (originalChart.chart) {
+                chartInstance = originalChart.chart;
+              } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
+                chartInstance = Chart.instances[Object.keys(Chart.instances)[0]];
+              }
 
-                if (chartInstance) {
-                  chartInstance.update(); // Force update
-                  await new Promise(resolve => setTimeout(resolve, 500)); // Wait for render
-                  const chartImage = chartInstance.toBase64Image('image/png');
-                  
-                  // Replace canvas with image in the clone
-                  const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
-                  if (clonedCanvas) {
-                    const img = document.createElement('img');
-                    img.src = chartImage;
-                    img.crossOrigin = 'anonymous';
-                    img.style.width = '100%';
-                    img.style.height = 'auto';
-                    img.style.display = 'block';
-                    img.style.margin = '0 auto';
-                    img.style.maxWidth = '300px';
-                    clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
-
-                    // Wait for image to load
-                    await new Promise(resolve => {
-                      if (img.complete) {
-                        resolve();
-                      } else {
-                        img.onload = resolve;
-                        img.onerror = () => {
-                          console.warn(`Failed to load chart image for ${chartId}`);
-                          resolve();
-                        };
-                      }
-                    });
-                    console.log(`Chart ${chartId} captured successfully`);
-                    resolve();
-                    return;
-                  }
-                }
-
-                // Fallback: Direct canvas copy
-                const captureCanvas = document.createElement('canvas');
-                captureCanvas.width = originalChart.width;
-                captureCanvas.height = originalChart.height;
-                const ctx = captureCanvas.getContext('2d');
-                ctx.drawImage(originalChart, 0, 0);
-                const chartImage = captureCanvas.toDataURL('image/png');
-
+              if (chartInstance) {
+                // Wait for chart to be fully rendered
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Get the chart image
+                const chartImage = chartInstance.toBase64Image();
+                
+                // Replace canvas with image in the clone
                 const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
                 if (clonedCanvas) {
                   const img = document.createElement('img');
                   img.src = chartImage;
-                  img.crossOrigin = 'anonymous';
                   img.style.width = '100%';
                   img.style.height = 'auto';
                   img.style.display = 'block';
-                  img.style.margin = '0 auto';
-                  img.style.maxWidth = '300px';
                   clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
-
-                  await new Promise(resolve => {
-                    if (img.complete) {
-                      resolve();
-                    } else {
-                      img.onload = resolve;
-                      img.onerror = () => {
-                        console.warn(`Failed to load fallback chart image for ${chartId}`);
-                        resolve();
-                      };
-                    }
-                  });
-                  console.log(`Chart ${chartId} captured via fallback`);
-                  resolve();
                 }
-              } catch (error) {
-                console.warn(`Chart capture attempt ${attempt + 1} failed:`, error);
-                if (attempt < maxRetries - 1) {
-                  attempt++;
-                  setTimeout(tryCapture, retryDelay);
-                } else {
-                  console.error(`Failed to capture chart ${chartId} after ${maxRetries} attempts`);
-                  resolve(); // Continue without chart
+              } else {
+                // Fallback: try to capture canvas directly
+                const img = document.createElement('img');
+                img.src = originalChart.toDataURL('image/png');
+                img.style.width = '100%';
+                img.style.height = 'auto';
+                img.style.display = 'block';
+                const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+                if (clonedCanvas) {
+                  clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
                 }
               }
-            };
-
-            await tryCapture();
+            } catch (error) {
+              console.warn('Chart capture failed:', error);
+              // Fallback: try to capture canvas directly
+              try {
+                const img = document.createElement('img');
+                img.src = originalChart.toDataURL('image/png');
+                img.style.width = '100%';
+                img.style.height = 'auto';
+                img.style.display = 'block';
+                const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+                if (clonedCanvas) {
+                  clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+                }
+              } catch (canvasError) {
+                console.error('Canvas capture failed:', canvasError);
+              }
+            }
+            resolve();
           });
         };
 
         // Wait for Chart.js to be ready
-        const waitForChart = (maxWait = 5000) => {
-          return new Promise((resolve, reject) => {
-            const start = Date.now();
-            const check = () => {
-              if (typeof Chart !== 'undefined') {
-                resolve();
-              } else if (Date.now() - start > maxWait) {
-                console.warn('Chart.js not loaded within timeout');
-                resolve(); // Continue without chart
-              } else {
-                setTimeout(check, 100);
-              }
-            };
-            check();
+        const waitForChart = () => {
+          return new Promise((resolve) => {
+            if (typeof Chart !== 'undefined') {
+              resolve();
+            } else {
+              setTimeout(() => waitForChart().then(resolve), 100);
+            }
           });
         };
 
-        // Ensure Chart.js is loaded and capture chart
+        // Capture the pie chart after ensuring Chart.js is loaded
         await waitForChart();
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Increased delay
         await captureChart('buyerPieChart');
 
-        // Make all cloned elements visible
+        // Make all elements visible
         resultsClone.querySelectorAll('*').forEach(el => {
-          const computedStyle = window.getComputedStyle(el);
-          if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
+          if (window.getComputedStyle(el).display === 'none') {
             el.style.display = 'block';
-            el.style.visibility = 'visible';
           }
         });
-
+        
         captureContainer.appendChild(resultsClone);
-
-        // Wait for images in clone to load
-        const images = resultsClone.querySelectorAll('img');
-        await Promise.all(Array.from(images).map(img => new Promise(resolve => {
-          if (img.complete) {
-            resolve();
-          } else {
-            img.crossOrigin = 'anonymous';
-            img.onload = resolve;
-            img.onerror = () => {
-              console.warn(`Failed to load image: ${img.src}`);
+        
+        // Wait for the pie chart image to load before capturing
+        const chartImg = resultsClone.querySelector('#pieChartContainer img');
+        if (chartImg) {
+          await new Promise(resolve => {
+            if (chartImg.complete) {
               resolve();
-            };
-          }
-        })));
-
+            } else {
+              chartImg.onload = resolve;
+              chartImg.onerror = resolve; // resolve even if image fails to load
+            }
+          });
+        }
+        
         captureContainer.innerHTML += `
           <div class="pdf-footer">
             <hr>
             <p>This report was generated on ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-            <p>For any questions, please contact our mortgage specialists at <a href="mailto:hello@theloanconnection.com.sg">hello@theloanconnection.com.sg</a></p>
+            <p>For any questions, please contact our mortgage specialists at <a href="mailto:enquiry@theloanconnection.com.sg">enquiry@theloanconnection.com.sg</a></p>
           </div>
         `;
-
+        
         // Add to document for capture
         document.body.appendChild(captureContainer);
-
-        // Calculate dimensions
+        
+        // Use original dimensions
         const width = Math.max(resultsClone.scrollWidth, 800);
-        const height = Math.max(resultsClone.scrollHeight + 200, 1200); // Reduced min height
-
+        const height = Math.max(resultsClone.scrollHeight + 200, 4500);
+        
         captureContainer.style.width = `${width}px`;
-        captureContainer.style.height = `${height}px`;
-
-        // Capture content with html2canvas
+        
+        // Capture content
         const canvas = await html2canvas(captureContainer, {
           scale: 2,
           useCORS: true,
-          logging: true,
+          logging: false,
           backgroundColor: '#ffffff',
           width: width,
           height: height,
           windowWidth: width,
-          windowHeight: height,
-          onclone: (clonedDoc) => {
-            // Ensure cloned content is visible
-            const clonedContainer = clonedDoc.querySelector('.pdf-capture-container');
-            if (clonedContainer) {
-              clonedContainer.style.position = 'static';
-              clonedContainer.style.left = '0';
-              clonedContainer.style.width = `${width}px`;
-              clonedContainer.style.height = `${height}px`;
-              clonedContainer.style.padding = '20px';
-              clonedContainer.style.background = '#ffffff';
-            }
-          }
+          windowHeight: height
         });
-
-        // Log canvas size for debugging
-        console.log(`Captured canvas size: ${canvas.width}x${canvas.height}`);
-
+        
         // Remove temporary container
         document.body.removeChild(captureContainer);
-
+        
         // Create PDF
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
@@ -681,14 +612,14 @@ class IpaModal {
           unit: 'px',
           format: [width, height]
         });
-
+        
         // Add captured content to PDF
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
         pdf.addImage(imgData, 'JPEG', 0, 0, width, height, '', 'FAST');
-
+        
         // Get base64 for submission
         const pdfBase64 = pdf.output('datauristring').split(',')[1];
-
+        
         // Prepare submission data
         const submissionData = {
           timestamp: new Date().toISOString(),
@@ -700,7 +631,7 @@ class IpaModal {
         };
 
         // Submit to Google Apps Script
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwpNUaZN36iIF6N4c1IgwKmrAfTtiFBz98F7SWqICCx9Yp01tW87B4aSAxu-MRq0gDDHA/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxCTCsh-nizVSH-zrYANPQJKMNzTpTOZTj1rQFpeT9LmlBNxwovGIIZWxu39Yese-wBQA/exec';
         const form = new FormData();
         
         Object.keys(submissionData).forEach(key => {
@@ -1229,7 +1160,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   const observer = new MutationObserver(function() {
-    setTimeout(sendHeight, 50);
+    setTimeout (sendHeight, 50);
   });
   observer.observe(document.body, {
     childList: true,
