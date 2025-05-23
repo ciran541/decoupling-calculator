@@ -6,7 +6,6 @@ function formatMoney(amount) {
 
 function formatNumberWithCommas(value) {
   if (!value) return "";
-  // Remove all non-digits
   const cleanedValue = value.replace(/[^0-9]/g, '');
   const number = parseFloat(cleanedValue);
   if (isNaN(number)) return value;
@@ -79,7 +78,6 @@ function calculateValuationFee(propertyValuation) {
   }
 }
 
-// Validation Functions
 function validatePropertyValuation(value) {
   if (!value || isNaN(value)) return "Please enter a valid valuation";
   if (value < 100000) return "Valuation must be at least S$100,000";
@@ -134,7 +132,6 @@ function validateInterestRate(value) {
 function validateTotalFinancing(loan, buyerCpfUsage, sellerCpfUsage, valuation) {
   const totalFinancing = loan + buyerCpfUsage + sellerCpfUsage;
   const maxAllowedFinancing = valuation * 0.95;
-  
   if (totalFinancing > maxAllowedFinancing) {
     return "Total financing (loan + CPF usage) cannot exceed 95% of property valuation";
   }
@@ -208,13 +205,478 @@ function createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuatio
   }
 }
 
-// Main Logic
-document.addEventListener('DOMContentLoaded', function() {
-  if (typeof Chart === 'undefined') {
-    const chartScript = document.createElement('script');
-    chartScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js';
-    document.head.appendChild(chartScript);
+class IpaModal {
+  constructor() {
+    this.modal = document.getElementById('ipaModal');
+    this.closeBtn = document.querySelector('.ipa-close');
+    this.bottomIpaButton = document.getElementById('bottomIpaButton');
+    this.form = document.getElementById('ipaForm');
+    this.submitBtn = this.form.querySelector('button[type="submit"]');
+    this.originalButtonText = this.submitBtn ? this.submitBtn.innerHTML : 'Submit';
+    this.isInIframe = window !== window.parent;
+    this.modal.style.display = 'none';
+    this.initializeEvents();
   }
+
+  initializeEvents() {
+    this.bottomIpaButton.addEventListener('click', () => {
+      this.openModal();
+    });
+
+    this.closeBtn.addEventListener('click', () => this.closeModal());
+    window.addEventListener('click', (e) => {
+      if (e.target === this.modal) this.closeModal();
+    });
+
+    this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+
+    if (this.isInIframe) {
+      window.addEventListener('resize', () => this.handleResize());
+    }
+  }
+
+  handleResize() {
+    if (this.modal.style.display === 'block') {
+      this.adjustModalPosition();
+    }
+  }
+
+  adjustModalPosition() {
+    const modalContent = this.modal.querySelector('.ipa-modal-content');
+    if (window.innerWidth <= 768) {
+      if (this.modal.style.display === 'block') {
+        this.modal.style.top = '0';
+        this.modal.style.height = '100%';
+        this.modal.style.overflow = 'auto';
+        if (modalContent) {
+          modalContent.style.marginTop = '20px';
+          modalContent.style.marginBottom = '20px';
+          modalContent.style.maxHeight = 'none';
+        }
+      }
+    } else {
+      this.modal.style.top = '';
+      this.modal.style.height = '';
+      this.modal.style.overflow = '';
+      if (modalContent) {
+        modalContent.style.marginTop = '';
+        modalContent.style.marginBottom = '';
+        modalContent.style.maxHeight = '';
+      }
+    }
+  }
+
+  openModal() {
+    if (this.isInIframe) {
+      window.parent.postMessage({ type: 'showModal' }, '*');
+      this.modal.style.display = 'block';
+      this.adjustModalPosition();
+    } else {
+      this.modal.style.display = 'block';
+    }
+  }
+
+  closeModal() {
+    if (this.isInIframe) {
+      window.parent.postMessage({ type: 'closeModal' }, '*');
+    }
+    this.modal.style.display = 'none';
+    const modalContent = this.modal.querySelector('.ipa-modal-content');
+    if (modalContent) {
+      modalContent.style.marginTop = '';
+      modalContent.style.marginBottom = '';
+      modalContent.style.maxHeight = '';
+    }
+    this.form.reset();
+    this.clearErrors();
+  }
+
+  validateForm() {
+    let isValid = true;
+    const name = document.getElementById('name');
+    const email = document.getElementById('emailAddress');
+    const mobile = document.getElementById('mobileNumber');
+
+    if (!name.value.trim()) {
+      this.showError(name, 'nameError', 'Name is required');
+      isValid = false;
+    }
+
+    if (!email.value.trim()) {
+      this.showError(email, 'emailError', 'Email is required');
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email.value)) {
+      this.showError(email, 'emailError', 'Please enter a valid email address');
+      isValid = false;
+    }
+
+    if (!mobile.value.trim()) {
+      this.showError(mobile, 'mobileError', 'Mobile number is required');
+      isValid = false;
+    } else if (!/^[89]\d{7}$/.test(mobile.value)) {
+      this.showError(mobile, 'mobileError', 'Please enter a valid Singapore mobile number');
+      isValid = false;
+    }
+
+    return isValid;
+  }
+
+  showError(input, errorId, message) {
+    const errorElement = document.getElementById(errorId);
+    input.classList.add('error');
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+  }
+
+  clearErrors() {
+    document.querySelectorAll('.ipa-error').forEach(error => {
+      error.style.display = 'none';
+    });
+    document.querySelectorAll('.ipa-input-group input').forEach(input => {
+      input.classList.remove('error');
+    });
+  }
+
+  getDecouplingDetails() {
+    return {
+      name: document.getElementById('name').value,
+      email: document.getElementById('emailAddress').value,
+      mobile: document.getElementById('mobileNumber').value,
+      propertyValuation: document.getElementById('propertyValuation').value,
+      outstandingLoan: document.getElementById('outstandingLoan').value,
+      yearsSincePurchase: document.getElementById('yearsSincePurchase').value,
+      buyerShare: document.getElementById('buyerShare').value,
+      sellerShare: document.getElementById('sellerShare').value,
+      residency: document.querySelector('input[name="residency"]:checked')?.value || '',
+      buyerAge: document.getElementById('buyerAge').value,
+      cpfUsage: document.getElementById('cpfUsage').value,
+      buyerCpfUsage: document.getElementById('buyerCpfUsage').value,
+      buyerCpfOaBalance: document.getElementById('buyerCpfOaBalance').value,
+      interestRate: document.getElementById('interestRateInput')?.value || '2.5'
+    };
+  }
+  showNotification(type = 'success', title = 'Success!', message = 'Thank you! Your report is being processed and will arrive in your email shortly.') {
+    if (this.isInIframe) {
+      window.parent.postMessage({
+        type: 'showNotification',
+        notification: {
+          type: type,
+          title: title,
+          message: message,
+          icon: type === 'success' ?
+            `<svg viewBox="0 0 24 24" width="24" height="24">
+                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8z"/>
+            </svg>` :
+            `<svg viewBox="0 0 24 24" width="24" height="24">
+                <path fill="#EF4444" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>`
+        }
+      }, '*');
+    } else {
+      const notification = document.getElementById('notification');
+      const titleElement = notification.querySelector('.notification-title');
+      const messageElement = notification.querySelector('.notification-description');
+      const iconElement = notification.querySelector('.notification-icon');
+      titleElement.textContent = title;
+      messageElement.textContent = message;
+      iconElement.innerHTML = type === 'success' ?
+        `<svg viewBox="0 0 24 24" width="24" height="24">
+           <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8z"/>
+         </svg>` :
+        `<svg viewBox="0 0 24 24" width="24" height="24">
+           <path fill="#EF4444" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+         </svg>`;
+      notification.classList.add('show');
+      setTimeout(() => notification.classList.remove('show'), 5000);
+    }
+  }
+
+  showLoading() {
+    if (this.submitBtn) {
+      this.submitBtn.disabled = true;
+      this.submitBtn.innerHTML = 'Almost there! Preparing your report...';
+    }
+  }
+
+  hideLoading() {
+    if (this.submitBtn) {
+      this.submitBtn.disabled = false;
+      this.submitBtn.innerHTML = this.originalButtonText;
+    }
+  }
+
+  async handleSubmit(e) {
+    e.preventDefault();
+    if (this.validateForm()) {
+      this.showLoading();
+
+      try {
+        const formData = new FormData(this.form);
+        const decouplingDetails = this.getDecouplingDetails();
+        const userName = formData.get('name');
+        const userEmail = formData.get('emailAddress');
+        
+        // Create temporary container
+        const captureContainer = document.createElement('div');
+        captureContainer.className = 'pdf-capture-container';
+        
+        captureContainer.innerHTML = `
+          <div class="pdf-header">
+            <div class="company-info">
+              <h1>The Loan Connection</h1>
+              <h2>Getting The Right Mortgage</h2>
+            </div>
+            <div class="user-info">
+              <p><strong>Prepared for:</strong> ${userName || 'Valued Customer'}</p>
+              <p><strong>Email:</strong> ${userEmail || 'N/A'}</p>
+              <p><strong>Generated on:</strong> ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+            </div>
+          </div>
+        `;
+
+        // Clone results section
+        const resultsSection = document.querySelector('.results-section');
+        const resultsClone = resultsSection.cloneNode(true);
+
+        // Function to capture chart as image
+        const captureChart = (chartId) => {
+          return new Promise(async (resolve) => {
+            const originalChart = document.getElementById(chartId);
+            if (!originalChart) {
+              resolve();
+              return;
+            }
+
+            try {
+              // Create a new canvas for capturing
+              const captureCanvas = document.createElement('canvas');
+              captureCanvas.width = originalChart.width;
+              captureCanvas.height = originalChart.height;
+              const ctx = captureCanvas.getContext('2d');
+
+              // Draw the original canvas content to the capture canvas
+              ctx.drawImage(originalChart, 0, 0);
+
+              // Get the image data
+              const chartImage = captureCanvas.toDataURL('image/png');
+
+              // Replace canvas with image in the clone
+              const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+              if (clonedCanvas) {
+                const img = document.createElement('img');
+                img.src = chartImage;
+                img.style.width = '100%';
+                img.style.height = 'auto';
+                img.style.display = 'block';
+                img.style.margin = '0 auto';
+                img.style.maxWidth = '300px';
+                clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+
+                // Wait for image to load
+                await new Promise(resolve => {
+                  if (img.complete) {
+                    resolve();
+                  } else {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                  }
+                });
+              }
+            } catch (error) {
+              console.warn('Chart capture failed:', error);
+              // If capture fails, try to get the chart instance
+              try {
+                let chartInstance = null;
+                
+                // Try different methods to get chart instance
+                if (typeof Chart.getChart === 'function') {
+                  chartInstance = Chart.getChart(originalChart);
+                } else if (originalChart.chart) {
+                  chartInstance = originalChart.chart;
+                } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
+                  chartInstance = Chart.instances[Object.keys(Chart.instances)[0]];
+                }
+
+                if (chartInstance) {
+                  // Wait for chart to be fully rendered
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  
+                  // Get the chart image
+                  const chartImage = chartInstance.toBase64Image();
+                  
+                  // Replace canvas with image in the clone
+                  const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+                  if (clonedCanvas) {
+                    const img = document.createElement('img');
+                    img.src = chartImage;
+                    img.style.width = '100%';
+                    img.style.height = 'auto';
+                    img.style.display = 'block';
+                    img.style.margin = '0 auto';
+                    img.style.maxWidth = '300px';
+                    clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+
+                    // Wait for image to load
+                    await new Promise(resolve => {
+                      if (img.complete) {
+                        resolve();
+                      } else {
+                        img.onload = resolve;
+                        img.onerror = resolve;
+                      }
+                    });
+                  }
+                }
+              } catch (fallbackError) {
+                console.error('Fallback chart capture failed:', fallbackError);
+              }
+            }
+            resolve();
+          });
+        };
+
+        // Wait for Chart.js to be ready
+        const waitForChart = () => {
+          return new Promise((resolve) => {
+            if (typeof Chart !== 'undefined') {
+              resolve();
+            } else {
+              setTimeout(() => waitForChart().then(resolve), 100);
+            }
+          });
+        };
+
+        // Capture the pie chart after ensuring Chart.js is loaded
+        await waitForChart();
+        // Add a delay to ensure chart is rendered
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await captureChart('buyerPieChart');
+
+        // Make all elements visible
+        resultsClone.querySelectorAll('*').forEach(el => {
+          if (window.getComputedStyle(el).display === 'none') {
+            el.style.display = 'block';
+          }
+        });
+        
+        captureContainer.appendChild(resultsClone);
+        
+        // Wait for the pie chart image to load before capturing
+        const chartImg = resultsClone.querySelector('#pieChartContainer img');
+        if (chartImg) {
+          await new Promise(resolve => {
+            if (chartImg.complete) {
+              resolve();
+            } else {
+              chartImg.onload = resolve;
+              chartImg.onerror = resolve;
+            }
+          });
+        }
+        
+        captureContainer.innerHTML += `
+          <div class="pdf-footer">
+            <hr>
+            <p>This report was generated on ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+            <p>For any questions, please contact our mortgage specialists at <a href="mailto:hello@theloanconnection.com.sg">hello@theloanconnection.com.sg</a></p>
+          </div>
+        `;
+        
+        // Add to document for capture
+        document.body.appendChild(captureContainer);
+        
+        // Use original dimensions
+        const width = Math.max(resultsClone.scrollWidth, 800);
+        const height = Math.max(resultsClone.scrollHeight + 200, 4500);
+        
+        captureContainer.style.width = `${width}px`;
+        
+        // Capture content
+        const canvas = await html2canvas(captureContainer, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: width,
+          height: height,
+          windowWidth: width,
+          windowHeight: height
+        });
+        
+        // Remove temporary container
+        document.body.removeChild(captureContainer);
+        
+        // Create PDF
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: width > height ? 'landscape' : 'portrait',
+          unit: 'px',
+          format: [width, height]
+        });
+        
+        // Add captured content to PDF
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        pdf.addImage(imgData, 'JPEG', 0, 0, width, height, '', 'FAST');
+        
+        // Get base64 for submission
+        const pdfBase64 = pdf.output('datauristring').split(',')[1];
+        
+        // Prepare submission data
+        const submissionData = {
+          timestamp: new Date().toISOString(),
+          name: formData.get('name'),
+          email: formData.get('emailAddress'),
+          mobile: formData.get('mobileNumber'),
+          pdfData: pdfBase64,
+          ...decouplingDetails
+        };
+
+        // Submit to Google Apps Script
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwpNUaZN36iIF6N4c1IgwKmrAfTtiFBz98F7SWqICCx9Yp01tW87B4aSAxu-MRq0gDDHA/exec';
+        const form = new FormData();
+        
+        Object.keys(submissionData).forEach(key => {
+          form.append(key, submissionData[key]);
+        });
+
+        const response = await fetch(scriptURL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: form
+        });
+
+        this.hideLoading();
+        this.closeModal();
+        
+        this.showNotification(
+          'success', 
+          'Success!', 
+          'Thank you! Your report is being processed and will arrive in your email shortly.'
+        );
+        
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        this.hideLoading();
+        
+        this.showNotification(
+          'error',
+          'Error',
+          'Sorry, there was an error submitting your form. Please try again.'
+        );
+      }
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const ipaModal = new IpaModal();
+
+  // Add event delegation for the bottomIpaButton
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'bottomIpaButton') {
+      ipaModal.openModal();
+    }
+  });
 
   const inputs = {
     propertyValuation: document.getElementById('propertyValuation'),
@@ -254,16 +716,13 @@ document.addEventListener('DOMContentLoaded', function() {
     interestRate: document.querySelector('label[for="interestRate"]')
   };
 
-  // Make sellerShare input read-only
   if (inputs.sellerShare) {
     inputs.sellerShare.readOnly = true;
-    inputs.sellerShare.style.backgroundColor = '#f0f0f0'; // Visual cue for read-only
+    inputs.sellerShare.style.backgroundColor = '#f0f0f0';
   }
 
-  // Store interest rate state
   let interestRateValue = 2.5;
 
-  // Format input fields on load
   ['propertyValuation', 'outstandingLoan', 'buyerShare', 'buyerAge', 'cpfUsage', 'buyerCpfUsage', 'buyerCpfOaBalance'].forEach(id => {
     if (inputs[id]) {
       inputs[id].value = formatNumberWithCommas(inputs[id].value);
@@ -272,7 +731,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function updateSellerShare() {
     const buyerShare = parseFormattedNumber(inputs.buyerShare.value);
-    const cappedBuyerShare = Math.min(buyerShare, 99); // Cap at 99
+    const cappedBuyerShare = Math.min(buyerShare, 99);
     inputs.buyerShare.value = formatNumberWithCommas(cappedBuyerShare.toFixed(0));
     inputs.sellerShare.value = formatNumberWithCommas((100 - cappedBuyerShare).toFixed(0));
   }
@@ -292,7 +751,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const buyerCpfOaBalance = parseFormattedNumber(inputs.buyerCpfOaBalance.value);
     const interestRate = interestRateValue;
 
-    // Validate inputs
     const validationErrors = [
       validatePropertyValuation(valuation),
       validateOutstandingLoan(loan),
@@ -321,7 +779,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('error').style.display = 'none';
 
-    // Buyer Calculations
     const buyerPropertyShare = valuation * buyerShare;
     const buyerLoanLiability = loan * buyerShare;
     const purchasePrice = valuation * sellerShare;
@@ -335,31 +792,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const absd = calculateABSD(purchasePrice, residency);
     const legalFees = 3000;
     const valuationFee = calculateValuationFee(valuation);
-
-    // Calculate how much CPF can be used for downpayment
     const cpfNeeded = cashCPF20Percent;
     const cpfUsedForDownpayment = Math.min(buyerCpfOaBalance, cpfNeeded);
     const cashTopupForDownpayment = cpfNeeded - cpfUsedForDownpayment;
-    
-    // Calculate total cash required
     const totalCashRequired = cash5Percent + cashTopupForDownpayment + bsd + absd + 
-                             (typeof valuationFee === 'number' ? valuationFee : 400);
-    
-    // Calculate CPF usage for legal fees
+                            (typeof valuationFee === 'number' ? valuationFee : 400);
     const cpfRemainingAfterDownpayment = buyerCpfOaBalance - cpfUsedForDownpayment;
     const cpfUsedForLegalFees = Math.min(cpfRemainingAfterDownpayment, legalFees);
     const cashTopupForLegalFees = legalFees - cpfUsedForLegalFees;
-    
-    // Add legal fees to total cash required if not enough CPF
     const totalCashRequiredWithLegal = totalCashRequired + cashTopupForLegalFees;
-
-    // Calculate percentages for pie chart
     const loanPercent = (newTotalLoan / valuation) * 100;
     const totalCpfUsed = buyerCpfUsage + cpfUsedForDownpayment;
     const cpfPercent = (totalCpfUsed / valuation) * 100;
     const cashableEquityPercent = 100 - loanPercent - cpfPercent;
-
-    // Seller Calculations
     const sellerPropertyShare = valuation * sellerShare;
     const sellerLoanLiability = loan * sellerShare;
     const sellingPrice = valuation * sellerShare;
@@ -367,7 +812,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const sellerLegalFees = 3000;
     const cashProceeds = sellingPrice - sellerLoanLiability - cpf;
 
-    // Render Results
     const results = document.getElementById('results');
     
     if (!valuation || valuation <= 0) {
@@ -379,13 +823,18 @@ document.addEventListener('DOMContentLoaded', function() {
         
         <div class="initial-message">
           <div class="initial-message-icon">
-            <img src="https://loan-eligibility.vercel.app/image/calculator_icon.png" alt="Calculator Icon">
+            <img src="https://theloanconnection.com.sg/wp-content/uploads/2025/04/stamp_duty_icon.png" alt="Calculator Icon">
           </div>
           <div class="initial-message-content">
             <div class="initial-message-title">Decoupling Calculator</div>
             <div class="initial-message-description">
               Enter the decoupling details above to estimate costs for both buyer and seller. Results will update automatically as you input values.
             </div>
+          </div>
+        </div>
+        <div class="bottom-ipa-section">
+          <div class="ipa-button-wrapper" style="max-width: 300px; margin: 2rem auto;">
+            <button class="ipa-button" id="bottomIpaButton">Send me this report</button>
           </div>
         </div>
       `;
@@ -404,7 +853,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="result-card buyer-card">
           <div class="result-card-header">
             <div class="result-card-icon">
-              <img src="https://loan-eligibility.vercel.app/image/TLC_Square.png" alt="Buyer Icon">
+              <img src="https://theloanconnection.com.sg/wp-content/uploads/2025/02/TLC-Square.png" alt="Buyer Icon">
             </div>
             <h3 class="result-card-title">Buyer's Perspective</h3>
           </div>
@@ -497,7 +946,7 @@ document.addEventListener('DOMContentLoaded', function() {
           
           <div class="result-section">
             <h4 class="result-section-title">SINGLE OWNERSHIP STRUCTURE</h4>
-            <div id="pieChartContainer" class="pie-chart-container" style="height: 300px; width: 100%; margin: 20px; 0;"></div>
+            <div id="pieChartContainer" class="pie-chart-container" style="height: 300px; width: 100%; margin: 20px 0;"></div>
             <div class="pie-chart-note" style="font-size: 12px; color: #666; text-align: center; margin-top: -10px;">
               Based on your property valuation of ${formatMoney(valuation)}.
             </div>
@@ -507,7 +956,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="result-card seller-card">
           <div class="result-card-header">
             <div class="result-card-icon">
-              <img src="https://loan-eligibility.vercel.app/image/TLC_Square.png" alt="Seller Icon">
+              <img src="https://theloanconnection.com.sg/wp-content/uploads/2025/02/TLC-Square.png" alt="Seller Icon">
             </div>
             <h3 class="result-card-title">Seller's Perspective</h3>
           </div>
@@ -560,9 +1009,14 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="disclaimer">
         <strong>Disclaimer from TLC:</strong> Figures provided on this page are for illustration purposes and do not constitute as a formal approval from a bank.
       </div>
+      
+      <div class="bottom-ipa-section">
+        <div class="ipa-button-wrapper" style="max-width: 300px; margin: 2rem auto;">
+          <button class="ipa-button" id="bottomIpaButton">Send me this report</button>
+        </div>
+      </div>
     `;
     
-    // Create pie chart after DOM is updated
     setTimeout(() => {
       if (typeof Chart !== 'undefined') {
         createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuation);
@@ -575,11 +1029,9 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }, 100);
 
-    // Add event listener for interest rate input
     const interestRateInput = document.getElementById('interestRateInput');
     const interestRateError = document.getElementById('interestRateError');
     if (interestRateInput) {
-      // Handle Enter keypress to trigger update
       interestRateInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
           const value = parsePercentage(this.value);
@@ -598,7 +1050,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
 
-      // Handle blur to format and validate
       interestRateInput.addEventListener('blur', function() {
         const value = parsePercentage(this.value);
         const error = validateInterestRate(value);
@@ -617,7 +1068,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Event Listeners for real-time formatting
   ['propertyValuation', 'outstandingLoan', 'buyerAge', 'cpfUsage', 'buyerCpfUsage', 'buyerCpfOaBalance'].forEach(id => {
     if (inputs[id]) {
       inputs[id].addEventListener('input', function() {
@@ -628,7 +1078,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Special handling for buyerShare to maintain percentage formatting and cap at 99
   if (inputs.buyerShare) {
     inputs.buyerShare.addEventListener('input', function() {
       const rawValue = this.value.replace(/[^0-9]/g, '');
@@ -639,7 +1088,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Event Listeners for calculations
   if (inputs.buyerShare) {
     inputs.buyerShare.addEventListener('input', () => {
       updateSellerShare();
@@ -657,7 +1105,6 @@ document.addEventListener('DOMContentLoaded', function() {
     radio.addEventListener('change', calculate);
   });
 
-  // Input Validation
   Object.keys(inputs).forEach(key => {
     if (inputs[key] && key !== 'yearsSincePurchase' && key !== 'residency' && key !== 'sellerShare') {
       inputs[key].addEventListener('input', function() {
@@ -700,25 +1147,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Initial calculation
   updateSellerShare();
   calculate();
-});
 
-// Iframe resizer
-document.addEventListener('DOMContentLoaded', function() {
   function sendHeight() {
     const height = document.body.scrollHeight + 20;
     window.parent.postMessage({ type: 'setHeight', height: height }, '*');
   }
-  
+
   const events = ['load', 'resize', 'input', 'change'];
   events.forEach(event => {
     window.addEventListener(event, sendHeight);
   });
-  
+
   const observer = new MutationObserver(function() {
-    setTimeout(sendHeight, 50);
+    setTimeout (sendHeight, 50);
   });
   observer.observe(document.body, {
     childList: true,
@@ -726,15 +1169,15 @@ document.addEventListener('DOMContentLoaded', function() {
     attributes: true,
     characterData: true
   });
-  
+
   window.addEventListener('message', function(event) {
     if (event.data.type === 'requestHeight') {
       sendHeight();
     }
   });
-  
+
   setTimeout(sendHeight, 300);
-  
+
   window.addEventListener('load', function() {
     setTimeout(sendHeight, 500);
   });
