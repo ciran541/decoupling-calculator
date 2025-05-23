@@ -338,7 +338,7 @@ class IpaModal {
   }
 
   getDecouplingDetails() {
-    const inputs = {
+    return {
       name: document.getElementById('name').value,
       email: document.getElementById('emailAddress').value,
       mobile: document.getElementById('mobileNumber').value,
@@ -354,36 +354,7 @@ class IpaModal {
       buyerCpfOaBalance: document.getElementById('buyerCpfOaBalance').value,
       interestRate: document.getElementById('interestRateInput')?.value || '2.5'
     };
-
-    const results = {
-      buyerPropertyShare: document.querySelector('.buyer-card .result-row:nth-child(1) .result-value')?.textContent || '-',
-      buyerLoanLiability: document.querySelector('.buyer-card .result-row:nth-child(2) .result-value')?.textContent || '-',
-      purchasePrice: document.querySelector('.buyer-card .result-row.highlight:nth-child(1) .result-value')?.textContent || '-',
-      cash5Percent: document.querySelector('.buyer-card .result-row:nth-child(2) .result-value')?.textContent || '-',
-      cashCPF20Percent: document.querySelector('.buyer-card .result-row:nth-child(3) .result-value')?.textContent || '-',
-      bankLoan75Percent: document.querySelector('.buyer-card .result-row:nth-child(4) .result-value')?.textContent || '-',
-      newTotalLoan: document.querySelector('.buyer-card .result-row:nth-child(5) .result-value')?.textContent || '-',
-      tenure: document.querySelector('.buyer-card .result-row:nth-child(6) .result-value')?.textContent || '-',
-      monthlyInstallment: document.querySelector('.buyer-card .result-row.highlight:nth-child(2) .result-value')?.textContent || '-',
-      bsd: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(1) .result-value')?.textContent || '-',
-      absd: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(2) .result-value')?.textContent || '-',
-      legalFees: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(3) .result-value')?.textContent || '-',
-      valuationFee: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(4) .result-value')?.textContent || '-',
-      totalCashRequired: document.querySelector('.buyer-card .result-section:nth-child(4) .result-row:nth-child(1) .result-value')?.textContent || '-',
-      cpfUsedForDownpayment: document.querySelector('.buyer-card .result-section:nth-child(4) .result-row:nth-child(2) .result-value')?.textContent || '-',
-      cpfUsedForLegalFees: document.querySelector('.buyer-card .result-section:nth-child(4) .result-row:nth-child(3) .result-value')?.textContent || '-',
-      sellerPropertyShare: document.querySelector('.seller-card .result-row:nth-child(1) .result-value')?.textContent || '-',
-      sellerLoanLiability: document.querySelector('.seller-card .result-row:nth-child(2) .result-value')?.textContent || '-',
-      sellingPrice: document.querySelector('.seller-card .result-section:nth-child(2) .result-row:nth-child(1) .result-value')?.textContent || '-',
-      sellerCpfUsage: document.querySelector('.seller-card .result-section:nth-child(2) .result-row:nth-child(3) .result-value')?.textContent || '-',
-      cashProceeds: document.querySelector('.seller-card .result-section:nth-child(2) .result-row:nth-child(4) .result-value')?.textContent || '-',
-      ssd: document.querySelector('.seller-card .result-section:nth-child(3) .result-row:nth-child(1) .result-value')?.textContent || '-',
-      sellerLegalFees: document.querySelector('.seller-card .result-section:nth-child(3) .result-row:nth-child(2) .result-value')?.textContent || '-'
-    };
-
-    return { ...inputs, ...results };
   }
-
   showNotification(type = 'success', title = 'Success!', message = 'Thank you! Your report is being processed and will arrive in your email shortly.') {
     if (this.isInIframe) {
       window.parent.postMessage({
@@ -465,23 +436,7 @@ class IpaModal {
 
         // Clone results section
         const resultsSection = document.querySelector('.results-section');
-        if (!resultsSection) {
-          console.error('Results section not found');
-          return;
-        }
         const resultsClone = resultsSection.cloneNode(true);
-
-        // Ensure results section is visible
-        resultsClone.style.display = 'block';
-        resultsClone.style.visibility = 'visible';
-        resultsClone.style.opacity = '1';
-        
-        // Make sure all child elements are visible
-        resultsClone.querySelectorAll('*').forEach(el => {
-          el.style.display = 'block';
-          el.style.visibility = 'visible';
-          el.style.opacity = '1';
-        });
 
         // Function to capture chart as image
         const captureChart = (chartId) => {
@@ -493,40 +448,88 @@ class IpaModal {
             }
 
             try {
-              // Get the chart instance
-              let chartInstance = null;
-              
-              // Try different methods to get chart instance
-              if (typeof Chart.getChart === 'function') {
-                chartInstance = Chart.getChart(originalChart);
-              } else if (originalChart.chart) {
-                chartInstance = originalChart.chart;
-              } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
-                chartInstance = Chart.instances[Object.keys(Chart.instances)[0]];
-              }
+              // Create a new canvas for capturing
+              const captureCanvas = document.createElement('canvas');
+              captureCanvas.width = originalChart.width;
+              captureCanvas.height = originalChart.height;
+              const ctx = captureCanvas.getContext('2d');
 
-              if (chartInstance) {
-                // Wait for chart to be fully rendered
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // Get the chart image
-                const chartImage = chartInstance.toBase64Image();
-                
-                // Replace canvas with image in the clone
-                const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
-                if (clonedCanvas) {
-                  const img = document.createElement('img');
-                  img.src = chartImage;
-                  img.style.width = '100%';
-                  img.style.height = 'auto';
-                  img.style.display = 'block';
-                  img.style.margin = '0 auto';
-                  img.style.maxWidth = '300px';
-                  clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
-                }
+              // Draw the original canvas content to the capture canvas
+              ctx.drawImage(originalChart, 0, 0);
+
+              // Get the image data
+              const chartImage = captureCanvas.toDataURL('image/png');
+
+              // Replace canvas with image in the clone
+              const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+              if (clonedCanvas) {
+                const img = document.createElement('img');
+                img.src = chartImage;
+                img.style.width = '100%';
+                img.style.height = 'auto';
+                img.style.display = 'block';
+                img.style.margin = '0 auto';
+                img.style.maxWidth = '300px';
+                clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+
+                // Wait for image to load
+                await new Promise(resolve => {
+                  if (img.complete) {
+                    resolve();
+                  } else {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                  }
+                });
               }
             } catch (error) {
               console.warn('Chart capture failed:', error);
+              // If capture fails, try to get the chart instance
+              try {
+                let chartInstance = null;
+                
+                // Try different methods to get chart instance
+                if (typeof Chart.getChart === 'function') {
+                  chartInstance = Chart.getChart(originalChart);
+                } else if (originalChart.chart) {
+                  chartInstance = originalChart.chart;
+                } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
+                  chartInstance = Chart.instances[Object.keys(Chart.instances)[0]];
+                }
+
+                if (chartInstance) {
+                  // Wait for chart to be fully rendered
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  
+                  // Get the chart image
+                  const chartImage = chartInstance.toBase64Image();
+                  
+                  // Replace canvas with image in the clone
+                  const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+                  if (clonedCanvas) {
+                    const img = document.createElement('img');
+                    img.src = chartImage;
+                    img.style.width = '100%';
+                    img.style.height = 'auto';
+                    img.style.display = 'block';
+                    img.style.margin = '0 auto';
+                    img.style.maxWidth = '300px';
+                    clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+
+                    // Wait for image to load
+                    await new Promise(resolve => {
+                      if (img.complete) {
+                        resolve();
+                      } else {
+                        img.onload = resolve;
+                        img.onerror = resolve;
+                      }
+                    });
+                  }
+                }
+              } catch (fallbackError) {
+                console.error('Fallback chart capture failed:', fallbackError);
+              }
             }
             resolve();
           });
@@ -545,6 +548,8 @@ class IpaModal {
 
         // Capture the pie chart after ensuring Chart.js is loaded
         await waitForChart();
+        // Add a delay to ensure chart is rendered
+        await new Promise(resolve => setTimeout(resolve, 1000));
         await captureChart('buyerPieChart');
 
         // Make all elements visible
@@ -556,6 +561,27 @@ class IpaModal {
         
         captureContainer.appendChild(resultsClone);
         
+        // Wait for the pie chart image to load before capturing
+        const chartImg = resultsClone.querySelector('#pieChartContainer img');
+        if (chartImg) {
+          await new Promise(resolve => {
+            if (chartImg.complete) {
+              resolve();
+            } else {
+              chartImg.onload = resolve;
+              chartImg.onerror = resolve;
+            }
+          });
+        }
+        
+        captureContainer.innerHTML += `
+          <div class="pdf-footer">
+            <hr>
+            <p>This report was generated on ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+            <p>For any questions, please contact our mortgage specialists at <a href="mailto:hello@theloanconnection.com.sg">hello@theloanconnection.com.sg</a></p>
+          </div>
+        `;
+        
         // Add to document for capture
         document.body.appendChild(captureContainer);
         
@@ -565,7 +591,7 @@ class IpaModal {
         
         captureContainer.style.width = `${width}px`;
         
-        // Capture content with simplified options
+        // Capture content
         const canvas = await html2canvas(captureContainer, {
           scale: 2,
           useCORS: true,
