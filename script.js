@@ -355,6 +355,7 @@ class IpaModal {
       interestRate: document.getElementById('interestRateInput')?.value || '2.5'
     };
   }
+
   showNotification(type = 'success', title = 'Success!', message = 'Thank you! Your report is being processed and will arrive in your email shortly.') {
     if (this.isInIframe) {
       window.parent.postMessage({
@@ -415,11 +416,33 @@ class IpaModal {
         const decouplingDetails = this.getDecouplingDetails();
         const userName = formData.get('name');
         const userEmail = formData.get('emailAddress');
-        
+
+        // Preload images to avoid CORS issues
+        const imageUrls = [
+          'https://theloanconnection.com.sg/wp-content/uploads/2025/02/TLC-Square.png',
+          'https://theloanconnection.com.sg/wp-content/uploads/2025/04/stamp_duty_icon.png'
+        ];
+        await Promise.all(imageUrls.map(url => new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = url;
+          img.onload = resolve;
+          img.onerror = () => {
+            console.warn(`Failed to preload image: ${url}`);
+            resolve(); // Continue even if image fails
+          };
+        })));
+
         // Create temporary container
         const captureContainer = document.createElement('div');
         captureContainer.className = 'pdf-capture-container';
-        
+        captureContainer.style.position = 'absolute';
+        captureContainer.style.left = '-9999px'; // Render off-screen
+        captureContainer.style.width = '800px';
+        captureContainer.style.background = '#ffffff';
+        captureContainer.style.padding = '20px';
+        captureContainer.style.boxSizing = 'border-box';
+
         captureContainer.innerHTML = `
           <div class="pdf-header">
             <div class="company-info">
@@ -436,59 +459,30 @@ class IpaModal {
 
         // Clone results section
         const resultsSection = document.querySelector('.results-section');
+        if (!resultsSection) {
+          throw new Error('Results section not found');
+        }
         const resultsClone = resultsSection.cloneNode(true);
 
-        // Function to capture chart as image
-        const captureChart = (chartId) => {
+        // Ensure cloned content is visible
+        resultsClone.style.display = 'block';
+        resultsClone.style.visibility = 'visible';
+
+        // Function to capture chart as image with retries
+        const captureChart = (chartId, maxRetries = 3, retryDelay = 1000) => {
           return new Promise(async (resolve) => {
             const originalChart = document.getElementById(chartId);
             if (!originalChart) {
+              console.warn(`Chart ${chartId} not found`);
               resolve();
               return;
             }
 
-            try {
-              // Create a new canvas for capturing
-              const captureCanvas = document.createElement('canvas');
-              captureCanvas.width = originalChart.width;
-              captureCanvas.height = originalChart.height;
-              const ctx = captureCanvas.getContext('2d');
-
-              // Draw the original canvas content to the capture canvas
-              ctx.drawImage(originalChart, 0, 0);
-
-              // Get the image data
-              const chartImage = captureCanvas.toDataURL('image/png');
-
-              // Replace canvas with image in the clone
-              const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
-              if (clonedCanvas) {
-                const img = document.createElement('img');
-                img.src = chartImage;
-                img.style.width = '100%';
-                img.style.height = 'auto';
-                img.style.display = 'block';
-                img.style.margin = '0 auto';
-                img.style.maxWidth = '300px';
-                clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
-
-                // Wait for image to load
-                await new Promise(resolve => {
-                  if (img.complete) {
-                    resolve();
-                  } else {
-                    img.onload = resolve;
-                    img.onerror = resolve;
-                  }
-                });
-              }
-            } catch (error) {
-              console.warn('Chart capture failed:', error);
-              // If capture fails, try to get the chart instance
+            let attempt = 0;
+            const tryCapture = async () => {
               try {
+                // Force chart re-render
                 let chartInstance = null;
-                
-                // Try different methods to get chart instance
                 if (typeof Chart.getChart === 'function') {
                   chartInstance = Chart.getChart(originalChart);
                 } else if (originalChart.chart) {
@@ -498,17 +492,16 @@ class IpaModal {
                 }
 
                 if (chartInstance) {
-                  // Wait for chart to be fully rendered
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                  
-                  // Get the chart image
-                  const chartImage = chartInstance.toBase64Image();
+                  chartInstance.update(); // Force update
+                  await new Promise(resolve => setTimeout(resolve, 500)); // Wait for render
+                  const chartImage = chartInstance.toBase64Image('image/png');
                   
                   // Replace canvas with image in the clone
                   const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
                   if (clonedCanvas) {
                     const img = document.createElement('img');
                     img.src = chartImage;
+                    img.crossOrigin = 'anonymous';
                     img.style.width = '100%';
                     img.style.height = 'auto';
                     img.style.display = 'block';
@@ -522,58 +515,117 @@ class IpaModal {
                         resolve();
                       } else {
                         img.onload = resolve;
-                        img.onerror = resolve;
+                        img.onerror = () => {
+                          console.warn(`Failed to load chart image for ${chartId}`);
+                          resolve();
+                        };
                       }
                     });
+                    console.log(`Chart ${chartId} captured successfully`);
+                    resolve();
+                    return;
                   }
                 }
-              } catch (fallbackError) {
-                console.error('Fallback chart capture failed:', fallbackError);
+
+                // Fallback: Direct canvas copy
+                const captureCanvas = document.createElement('canvas');
+                captureCanvas.width = originalChart.width;
+                captureCanvas.height = originalChart.height;
+                const ctx = captureCanvas.getContext('2d');
+                ctx.drawImage(originalChart, 0, 0);
+                const chartImage = captureCanvas.toDataURL('image/png');
+
+                const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+                if (clonedCanvas) {
+                  const img = document.createElement('img');
+                  img.src = chartImage;
+                  img.crossOrigin = 'anonymous';
+                  img.style.width = '100%';
+                  img.style.height = 'auto';
+                  img.style.display = 'block';
+                  img.style.margin = '0 auto';
+                  img.style.maxWidth = '300px';
+                  clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+
+                  await new Promise(resolve => {
+                    if (img.complete) {
+                      resolve();
+                    } else {
+                      img.onload = resolve;
+                      img.onerror = () => {
+                        console.warn(`Failed to load fallback chart image for ${chartId}`);
+                        resolve();
+                      };
+                    }
+                  });
+                  console.log(`Chart ${chartId} captured via fallback`);
+                  resolve();
+                }
+              } catch (error) {
+                console.warn(`Chart capture attempt ${attempt + 1} failed:`, error);
+                if (attempt < maxRetries - 1) {
+                  attempt++;
+                  setTimeout(tryCapture, retryDelay);
+                } else {
+                  console.error(`Failed to capture chart ${chartId} after ${maxRetries} attempts`);
+                  resolve(); // Continue without chart
+                }
               }
-            }
-            resolve();
+            };
+
+            await tryCapture();
           });
         };
 
         // Wait for Chart.js to be ready
-        const waitForChart = () => {
-          return new Promise((resolve) => {
-            if (typeof Chart !== 'undefined') {
-              resolve();
-            } else {
-              setTimeout(() => waitForChart().then(resolve), 100);
-            }
+        const waitForChart = (maxWait = 5000) => {
+          return new Promise((resolve, reject) => {
+            const start = Date.now();
+            const check = () => {
+              if (typeof Chart !== 'undefined') {
+                resolve();
+              } else if (Date.now() - start > maxWait) {
+                console.warn('Chart.js not loaded within timeout');
+                resolve(); // Continue without chart
+              } else {
+                setTimeout(check, 100);
+              }
+            };
+            check();
           });
         };
 
-        // Capture the pie chart after ensuring Chart.js is loaded
+        // Ensure Chart.js is loaded and capture chart
         await waitForChart();
-        // Add a delay to ensure chart is rendered
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Increased delay
         await captureChart('buyerPieChart');
 
-        // Make all elements visible
+        // Make all cloned elements visible
         resultsClone.querySelectorAll('*').forEach(el => {
-          if (window.getComputedStyle(el).display === 'none') {
+          const computedStyle = window.getComputedStyle(el);
+          if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
             el.style.display = 'block';
+            el.style.visibility = 'visible';
           }
         });
-        
+
         captureContainer.appendChild(resultsClone);
-        
-        // Wait for the pie chart image to load before capturing
-        const chartImg = resultsClone.querySelector('#pieChartContainer img');
-        if (chartImg) {
-          await new Promise(resolve => {
-            if (chartImg.complete) {
+
+        // Wait for images in clone to load
+        const images = resultsClone.querySelectorAll('img');
+        await Promise.all(Array.from(images).map(img => new Promise(resolve => {
+          if (img.complete) {
+            resolve();
+          } else {
+            img.crossOrigin = 'anonymous';
+            img.onload = resolve;
+            img.onerror = () => {
+              console.warn(`Failed to load image: ${img.src}`);
               resolve();
-            } else {
-              chartImg.onload = resolve;
-              chartImg.onerror = resolve;
-            }
-          });
-        }
-        
+            };
+          }
+        })));
+
         captureContainer.innerHTML += `
           <div class="pdf-footer">
             <hr>
@@ -581,31 +633,47 @@ class IpaModal {
             <p>For any questions, please contact our mortgage specialists at <a href="mailto:hello@theloanconnection.com.sg">hello@theloanconnection.com.sg</a></p>
           </div>
         `;
-        
+
         // Add to document for capture
         document.body.appendChild(captureContainer);
-        
-        // Use original dimensions
+
+        // Calculate dimensions
         const width = Math.max(resultsClone.scrollWidth, 800);
-        const height = Math.max(resultsClone.scrollHeight + 200, 4500);
-        
+        const height = Math.max(resultsClone.scrollHeight + 200, 1200); // Reduced min height
+
         captureContainer.style.width = `${width}px`;
-        
-        // Capture content
+        captureContainer.style.height = `${height}px`;
+
+        // Capture content with html2canvas
         const canvas = await html2canvas(captureContainer, {
           scale: 2,
           useCORS: true,
-          logging: false,
+          logging: true,
           backgroundColor: '#ffffff',
           width: width,
           height: height,
           windowWidth: width,
-          windowHeight: height
+          windowHeight: height,
+          onclone: (clonedDoc) => {
+            // Ensure cloned content is visible
+            const clonedContainer = clonedDoc.querySelector('.pdf-capture-container');
+            if (clonedContainer) {
+              clonedContainer.style.position = 'static';
+              clonedContainer.style.left = '0';
+              clonedContainer.style.width = `${width}px`;
+              clonedContainer.style.height = `${height}px`;
+              clonedContainer.style.padding = '20px';
+              clonedContainer.style.background = '#ffffff';
+            }
+          }
         });
-        
+
+        // Log canvas size for debugging
+        console.log(`Captured canvas size: ${canvas.width}x${canvas.height}`);
+
         // Remove temporary container
         document.body.removeChild(captureContainer);
-        
+
         // Create PDF
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
@@ -613,14 +681,14 @@ class IpaModal {
           unit: 'px',
           format: [width, height]
         });
-        
+
         // Add captured content to PDF
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         pdf.addImage(imgData, 'JPEG', 0, 0, width, height, '', 'FAST');
-        
+
         // Get base64 for submission
         const pdfBase64 = pdf.output('datauristring').split(',')[1];
-        
+
         // Prepare submission data
         const submissionData = {
           timestamp: new Date().toISOString(),
@@ -1161,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   const observer = new MutationObserver(function() {
-    setTimeout (sendHeight, 50);
+    setTimeout(sendHeight, 50);
   });
   observer.observe(document.body, {
     childList: true,
