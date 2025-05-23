@@ -338,7 +338,7 @@ class IpaModal {
   }
 
   getDecouplingDetails() {
-    return {
+    const inputs = {
       name: document.getElementById('name').value,
       email: document.getElementById('emailAddress').value,
       mobile: document.getElementById('mobileNumber').value,
@@ -354,7 +354,36 @@ class IpaModal {
       buyerCpfOaBalance: document.getElementById('buyerCpfOaBalance').value,
       interestRate: document.getElementById('interestRateInput')?.value || '2.5'
     };
+
+    const results = {
+      buyerPropertyShare: document.querySelector('.buyer-card .result-row:nth-child(1) .result-value')?.textContent || '-',
+      buyerLoanLiability: document.querySelector('.buyer-card .result-row:nth-child(2) .result-value')?.textContent || '-',
+      purchasePrice: document.querySelector('.buyer-card .result-row.highlight:nth-child(1) .result-value')?.textContent || '-',
+      cash5Percent: document.querySelector('.buyer-card .result-row:nth-child(2) .result-value')?.textContent || '-',
+      cashCPF20Percent: document.querySelector('.buyer-card .result-row:nth-child(3) .result-value')?.textContent || '-',
+      bankLoan75Percent: document.querySelector('.buyer-card .result-row:nth-child(4) .result-value')?.textContent || '-',
+      newTotalLoan: document.querySelector('.buyer-card .result-row:nth-child(5) .result-value')?.textContent || '-',
+      tenure: document.querySelector('.buyer-card .result-row:nth-child(6) .result-value')?.textContent || '-',
+      monthlyInstallment: document.querySelector('.buyer-card .result-row.highlight:nth-child(2) .result-value')?.textContent || '-',
+      bsd: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(1) .result-value')?.textContent || '-',
+      absd: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(2) .result-value')?.textContent || '-',
+      legalFees: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(3) .result-value')?.textContent || '-',
+      valuationFee: document.querySelector('.buyer-card .result-section:nth-child(3) .result-row:nth-child(4) .result-value')?.textContent || '-',
+      totalCashRequired: document.querySelector('.buyer-card .result-section:nth-child(4) .result-row:nth-child(1) .result-value')?.textContent || '-',
+      cpfUsedForDownpayment: document.querySelector('.buyer-card .result-section:nth-child(4) .result-row:nth-child(2) .result-value')?.textContent || '-',
+      cpfUsedForLegalFees: document.querySelector('.buyer-card .result-section:nth-child(4) .result-row:nth-child(3) .result-value')?.textContent || '-',
+      sellerPropertyShare: document.querySelector('.seller-card .result-row:nth-child(1) .result-value')?.textContent || '-',
+      sellerLoanLiability: document.querySelector('.seller-card .result-row:nth-child(2) .result-value')?.textContent || '-',
+      sellingPrice: document.querySelector('.seller-card .result-section:nth-child(2) .result-row:nth-child(1) .result-value')?.textContent || '-',
+      sellerCpfUsage: document.querySelector('.seller-card .result-section:nth-child(2) .result-row:nth-child(3) .result-value')?.textContent || '-',
+      cashProceeds: document.querySelector('.seller-card .result-section:nth-child(2) .result-row:nth-child(4) .result-value')?.textContent || '-',
+      ssd: document.querySelector('.seller-card .result-section:nth-child(3) .result-row:nth-child(1) .result-value')?.textContent || '-',
+      sellerLegalFees: document.querySelector('.seller-card .result-section:nth-child(3) .result-row:nth-child(2) .result-value')?.textContent || '-'
+    };
+
+    return { ...inputs, ...results };
   }
+
   showNotification(type = 'success', title = 'Success!', message = 'Thank you! Your report is being processed and will arrive in your email shortly.') {
     if (this.isInIframe) {
       window.parent.postMessage({
@@ -436,7 +465,23 @@ class IpaModal {
 
         // Clone results section
         const resultsSection = document.querySelector('.results-section');
+        if (!resultsSection) {
+          console.error('Results section not found');
+          return;
+        }
         const resultsClone = resultsSection.cloneNode(true);
+
+        // Ensure results section is visible
+        resultsClone.style.display = 'block';
+        resultsClone.style.visibility = 'visible';
+        resultsClone.style.opacity = '1';
+        
+        // Make sure all child elements are visible
+        resultsClone.querySelectorAll('*').forEach(el => {
+          el.style.display = 'block';
+          el.style.visibility = 'visible';
+          el.style.opacity = '1';
+        });
 
         // Function to capture chart as image
         const captureChart = (chartId) => {
@@ -595,26 +640,65 @@ class IpaModal {
         const canvas = await html2canvas(captureContainer, {
           scale: 2,
           useCORS: true,
+          allowTaint: true,
+          foreignObjectRendering: true,
           logging: false,
           backgroundColor: '#ffffff',
           width: width,
           height: height,
           windowWidth: width,
-          windowHeight: height
+          windowHeight: height,
+          onclone: (clonedDoc) => {
+            // Ensure all images in the cloned document are loaded
+            const images = clonedDoc.getElementsByTagName('img');
+            return new Promise((resolve) => {
+              let loadedImages = 0;
+              const totalImages = images.length;
+              
+              if (totalImages === 0) {
+                resolve();
+                return;
+              }
+
+              for (let i = 0; i < totalImages; i++) {
+                const img = images[i];
+                if (img.complete) {
+                  loadedImages++;
+                  if (loadedImages === totalImages) {
+                    resolve();
+                  }
+                } else {
+                  img.onload = () => {
+                    loadedImages++;
+                    if (loadedImages === totalImages) {
+                      resolve();
+                    }
+                  };
+                  img.onerror = () => {
+                    loadedImages++;
+                    if (loadedImages === totalImages) {
+                      resolve();
+                    }
+                  };
+                }
+              }
+            });
+          }
         });
         
         // Remove temporary container
         document.body.removeChild(captureContainer);
         
-        // Create PDF
+        // Create PDF with better quality settings
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
           orientation: width > height ? 'landscape' : 'portrait',
           unit: 'px',
-          format: [width, height]
+          format: [width, height],
+          compress: true
         });
         
-        // Add captured content to PDF
+        // Add captured content to PDF with better quality
         const imgData = canvas.toDataURL('image/jpeg', 1.0);
         pdf.addImage(imgData, 'JPEG', 0, 0, width, height, '', 'FAST');
         
