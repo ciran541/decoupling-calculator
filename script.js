@@ -493,88 +493,40 @@ class IpaModal {
             }
 
             try {
-              // Create a new canvas for capturing
-              const captureCanvas = document.createElement('canvas');
-              captureCanvas.width = originalChart.width;
-              captureCanvas.height = originalChart.height;
-              const ctx = captureCanvas.getContext('2d');
+              // Get the chart instance
+              let chartInstance = null;
+              
+              // Try different methods to get chart instance
+              if (typeof Chart.getChart === 'function') {
+                chartInstance = Chart.getChart(originalChart);
+              } else if (originalChart.chart) {
+                chartInstance = originalChart.chart;
+              } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
+                chartInstance = Chart.instances[Object.keys(Chart.instances)[0]];
+              }
 
-              // Draw the original canvas content to the capture canvas
-              ctx.drawImage(originalChart, 0, 0);
-
-              // Get the image data
-              const chartImage = captureCanvas.toDataURL('image/png');
-
-              // Replace canvas with image in the clone
-              const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
-              if (clonedCanvas) {
-                const img = document.createElement('img');
-                img.src = chartImage;
-                img.style.width = '100%';
-                img.style.height = 'auto';
-                img.style.display = 'block';
-                img.style.margin = '0 auto';
-                img.style.maxWidth = '300px';
-                clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
-
-                // Wait for image to load
-                await new Promise(resolve => {
-                  if (img.complete) {
-                    resolve();
-                  } else {
-                    img.onload = resolve;
-                    img.onerror = resolve;
-                  }
-                });
+              if (chartInstance) {
+                // Wait for chart to be fully rendered
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Get the chart image
+                const chartImage = chartInstance.toBase64Image();
+                
+                // Replace canvas with image in the clone
+                const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+                if (clonedCanvas) {
+                  const img = document.createElement('img');
+                  img.src = chartImage;
+                  img.style.width = '100%';
+                  img.style.height = 'auto';
+                  img.style.display = 'block';
+                  img.style.margin = '0 auto';
+                  img.style.maxWidth = '300px';
+                  clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+                }
               }
             } catch (error) {
               console.warn('Chart capture failed:', error);
-              // If capture fails, try to get the chart instance
-              try {
-                let chartInstance = null;
-                
-                // Try different methods to get chart instance
-                if (typeof Chart.getChart === 'function') {
-                  chartInstance = Chart.getChart(originalChart);
-                } else if (originalChart.chart) {
-                  chartInstance = originalChart.chart;
-                } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
-                  chartInstance = Chart.instances[Object.keys(Chart.instances)[0]];
-                }
-
-                if (chartInstance) {
-                  // Wait for chart to be fully rendered
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                  
-                  // Get the chart image
-                  const chartImage = chartInstance.toBase64Image();
-                  
-                  // Replace canvas with image in the clone
-                  const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
-                  if (clonedCanvas) {
-                    const img = document.createElement('img');
-                    img.src = chartImage;
-                    img.style.width = '100%';
-                    img.style.height = 'auto';
-                    img.style.display = 'block';
-                    img.style.margin = '0 auto';
-                    img.style.maxWidth = '300px';
-                    clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
-
-                    // Wait for image to load
-                    await new Promise(resolve => {
-                      if (img.complete) {
-                        resolve();
-                      } else {
-                        img.onload = resolve;
-                        img.onerror = resolve;
-                      }
-                    });
-                  }
-                }
-              } catch (fallbackError) {
-                console.error('Fallback chart capture failed:', fallbackError);
-              }
             }
             resolve();
           });
@@ -593,8 +545,6 @@ class IpaModal {
 
         // Capture the pie chart after ensuring Chart.js is loaded
         await waitForChart();
-        // Add a delay to ensure chart is rendered
-        await new Promise(resolve => setTimeout(resolve, 1000));
         await captureChart('buyerPieChart');
 
         // Make all elements visible
@@ -606,27 +556,6 @@ class IpaModal {
         
         captureContainer.appendChild(resultsClone);
         
-        // Wait for the pie chart image to load before capturing
-        const chartImg = resultsClone.querySelector('#pieChartContainer img');
-        if (chartImg) {
-          await new Promise(resolve => {
-            if (chartImg.complete) {
-              resolve();
-            } else {
-              chartImg.onload = resolve;
-              chartImg.onerror = resolve;
-            }
-          });
-        }
-        
-        captureContainer.innerHTML += `
-          <div class="pdf-footer">
-            <hr>
-            <p>This report was generated on ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-            <p>For any questions, please contact our mortgage specialists at <a href="mailto:hello@theloanconnection.com.sg">hello@theloanconnection.com.sg</a></p>
-          </div>
-        `;
-        
         // Add to document for capture
         document.body.appendChild(captureContainer);
         
@@ -636,69 +565,30 @@ class IpaModal {
         
         captureContainer.style.width = `${width}px`;
         
-        // Capture content
+        // Capture content with simplified options
         const canvas = await html2canvas(captureContainer, {
           scale: 2,
           useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: true,
           logging: false,
           backgroundColor: '#ffffff',
           width: width,
           height: height,
           windowWidth: width,
-          windowHeight: height,
-          onclone: (clonedDoc) => {
-            // Ensure all images in the cloned document are loaded
-            const images = clonedDoc.getElementsByTagName('img');
-            return new Promise((resolve) => {
-              let loadedImages = 0;
-              const totalImages = images.length;
-              
-              if (totalImages === 0) {
-                resolve();
-                return;
-              }
-
-              for (let i = 0; i < totalImages; i++) {
-                const img = images[i];
-                if (img.complete) {
-                  loadedImages++;
-                  if (loadedImages === totalImages) {
-                    resolve();
-                  }
-                } else {
-                  img.onload = () => {
-                    loadedImages++;
-                    if (loadedImages === totalImages) {
-                      resolve();
-                    }
-                  };
-                  img.onerror = () => {
-                    loadedImages++;
-                    if (loadedImages === totalImages) {
-                      resolve();
-                    }
-                  };
-                }
-              }
-            });
-          }
+          windowHeight: height
         });
         
         // Remove temporary container
         document.body.removeChild(captureContainer);
         
-        // Create PDF with better quality settings
+        // Create PDF
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
           orientation: width > height ? 'landscape' : 'portrait',
           unit: 'px',
-          format: [width, height],
-          compress: true
+          format: [width, height]
         });
         
-        // Add captured content to PDF with better quality
+        // Add captured content to PDF
         const imgData = canvas.toDataURL('image/jpeg', 1.0);
         pdf.addImage(imgData, 'JPEG', 0, 0, width, height, '', 'FAST');
         
