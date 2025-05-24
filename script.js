@@ -434,22 +434,6 @@ class IpaModal {
     }
   }
 
-  // Helper function to wait for all images within a container to load
-  async waitForAllImagesToLoad(container) {
-    const images = container.querySelectorAll('img');
-    const promises = Array.from(images).map(img => {
-      return new Promise((resolve) => {
-        if (img.complete) {
-          resolve();
-        } else {
-          img.onload = resolve;
-          img.onerror = resolve; // Also resolve on error to prevent infinite waiting
-        }
-      });
-    });
-    await Promise.all(promises);
-  }
-
   async handleSubmit(e) {
     e.preventDefault();
     if (this.validateForm()) {
@@ -531,7 +515,14 @@ class IpaModal {
                   clonedCanvas.parentNode.replaceChild(container, clonedCanvas);
 
                    // Wait for the image to load
-                  await this.waitForAllImagesToLoad(container);
+                  await new Promise(resolve => {
+                    if (img.complete) {
+                      resolve();
+                    } else {
+                      img.onload = resolve;
+                      img.onerror = resolve;
+                    }
+                  });
                 }
               } else {
                  console.warn('Chart instance not found for canvas:', chartId);
@@ -571,7 +562,14 @@ class IpaModal {
         // Wait for the pie chart image to load before capturing
         const chartImg = resultsClone.querySelector('#pieChartContainer img');
         if (chartImg) {
-          await this.waitForAllImagesToLoad(chartImg.parentNode);
+          await new Promise(resolve => {
+            if (chartImg.complete) {
+              resolve();
+            } else {
+              chartImg.onload = resolve;
+              chartImg.onerror = resolve;
+            }
+          });
         }
         
         captureContainer.innerHTML += `
@@ -852,7 +850,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="results-container">
         <div class="result-card buyer-card">
           <div class="result-card-header">
-            <div class="result-card-icon">
+           <div class="result-card-icon">
               <img src="https://theloanconnection.com.sg/wp-content/uploads/2025/02/TLC-Square.png" alt="Buyer Icon">
             </div>
             <h3 class="result-card-title">Buyer's Perspective</h3>
@@ -958,6 +956,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="result-card-icon">
               <img src="https://theloanconnection.com.sg/wp-content/uploads/2025/02/TLC-Square.png" alt="Seller Icon">
             </div>
+
             <h3 class="result-card-title">Seller's Perspective</h3>
           </div>
           
