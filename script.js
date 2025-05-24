@@ -867,7 +867,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="result-card buyer-card">
           <div class="result-card-header">
             <div class="result-card-icon">
-              <img src="https://theloanconnection.com.sg/wp-content/uploads/2025/02/TLC-Square.png" alt="Buyer Icon">
+              <img src="./image/TLC_Square.png" alt="Buyer Icon">
             </div>
             <h3 class="result-card-title">Buyer's Perspective</h3>
           </div>
@@ -970,7 +970,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="result-card seller-card">
           <div class="result-card-header">
             <div class="result-card-icon">
-              <img src="https://theloanconnection.com.sg/wp-content/uploads/2025/02/TLC-Square.png" alt="Seller Icon">
+              <img src="./image/TLC_Square.png" alt="Seller Icon">
             </div>
             <h3 class="result-card-title">Seller's Perspective</h3>
           </div>
