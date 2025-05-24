@@ -434,6 +434,22 @@ class IpaModal {
     }
   }
 
+  // Helper function to wait for all images within a container to load
+  async waitForAllImagesToLoad(container) {
+    const images = container.querySelectorAll('img');
+    const promises = Array.from(images).map(img => {
+      return new Promise((resolve) => {
+        if (img.complete) {
+          resolve();
+        } else {
+          img.onload = resolve;
+          img.onerror = resolve; // Also resolve on error to prevent infinite waiting
+        }
+      });
+    });
+    await Promise.all(promises);
+  }
+
   async handleSubmit(e) {
     e.preventDefault();
     if (this.validateForm()) {
@@ -515,14 +531,7 @@ class IpaModal {
                   clonedCanvas.parentNode.replaceChild(container, clonedCanvas);
 
                    // Wait for the image to load
-                  await new Promise(resolve => {
-                    if (img.complete) {
-                      resolve();
-                    } else {
-                      img.onload = resolve;
-                      img.onerror = resolve;
-                    }
-                  });
+                  await this.waitForAllImagesToLoad(container);
                 }
               } else {
                  console.warn('Chart instance not found for canvas:', chartId);
@@ -562,14 +571,7 @@ class IpaModal {
         // Wait for the pie chart image to load before capturing
         const chartImg = resultsClone.querySelector('#pieChartContainer img');
         if (chartImg) {
-          await new Promise(resolve => {
-            if (chartImg.complete) {
-              resolve();
-            } else {
-              chartImg.onload = resolve;
-              chartImg.onerror = resolve;
-            }
-          });
+          await this.waitForAllImagesToLoad(chartImg.parentNode);
         }
         
         captureContainer.innerHTML += `
