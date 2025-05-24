@@ -178,21 +178,24 @@ function createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuatio
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      legend: {
-        position: 'bottom',
-        align: 'start',
-        labels: {
-          fontSize: 14,
-          padding: 20,
-          boxWidth: 15
+      plugins: {
+        legend: {
+          position: 'bottom',
+          align: 'start',
+          labels: {
+            font: {
+              size: 14
+            },
+            padding: 20,
+            boxWidth: 15
+          },
+          display: true
         },
-        display: true,
-        maxWidth: 240
-      },
-      tooltips: {
-        callbacks: {
-          label: function(tooltipItem, data) {
-            return data.labels[tooltipItem.index];
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return context.label;
+            }
           }
         }
       }
@@ -467,84 +470,65 @@ class IpaModal {
         // Function to capture chart as image
         const captureChart = (chartId) => {
           return new Promise(async (resolve) => {
-            const originalChart = document.getElementById(chartId);
-            if (!originalChart) {
+            const originalCanvas = document.getElementById(chartId);
+            if (!originalCanvas) {
               resolve();
               return;
             }
 
             try {
-              // Create a new canvas for capturing
-              const captureCanvas = document.createElement('canvas');
-              captureCanvas.width = originalChart.width;
-              captureCanvas.height = originalChart.height;
-              const ctx = captureCanvas.getContext('2d');
-
-              // Draw the original canvas content to the capture canvas
-              ctx.drawImage(originalChart, 0, 0);
-
-              // Create image from the capture canvas
-              const img = document.createElement('img');
-              img.src = captureCanvas.toDataURL('image/png');
-              img.style.width = '100%';
-              img.style.height = 'auto';
-              img.style.display = 'block';
-              img.style.margin = '0 auto';
-
-              // Replace the canvas in the clone
-              const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
-              if (clonedCanvas) {
-                // Create a container for the image
-                const container = document.createElement('div');
-                container.style.width = '100%';
-                container.style.textAlign = 'center';
-                container.appendChild(img);
-                
-                // Replace the canvas with the container
-                clonedCanvas.parentNode.replaceChild(container, clonedCanvas);
+              // Get chart instance
+              let chartInstance = null;
+              if (typeof Chart.getChart === 'function') {
+                chartInstance = Chart.getChart(originalCanvas);
+              } else if (originalCanvas.chart) {
+                chartInstance = originalCanvas.chart;
+              } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
+                 // Find the instance associated with the canvas
+                 for (const key in Chart.instances) {
+                     if (Chart.instances[key].canvas === originalCanvas) {
+                         chartInstance = Chart.instances[key];
+                         break;
+                     }
+                 }
               }
 
-              // Wait for the image to load
-              await new Promise(resolve => {
-                if (img.complete) {
-                  resolve();
-                } else {
-                  img.onload = resolve;
-                  img.onerror = resolve;
-                }
-              });
+              if (chartInstance) {
+                // Use Chart.js's built-in method to get image data
+                const chartImage = chartInstance.toBase64Image('image/png', 1.0);
+                const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
+                if (clonedCanvas) {
+                  const img = document.createElement('img');
+                  img.src = chartImage;
+                  img.style.width = '100%';
+                  img.style.height = 'auto';
+                  img.style.display = 'block';
+                  img.style.margin = '0 auto';
 
+                  // Create a container for the image
+                  const container = document.createElement('div');
+                  container.style.width = '100%';
+                  container.style.textAlign = 'center';
+                  container.appendChild(img);
+
+                  // Replace the canvas with the container
+                  clonedCanvas.parentNode.replaceChild(container, clonedCanvas);
+
+                   // Wait for the image to load
+                  await new Promise(resolve => {
+                    if (img.complete) {
+                      resolve();
+                    } else {
+                      img.onload = resolve;
+                      img.onerror = resolve;
+                    }
+                  });
+                }
+              } else {
+                 console.warn('Chart instance not found for canvas:', chartId);
+              }
             } catch (error) {
-              console.warn('Chart capture failed:', error);
-              // If capture fails, try to get the chart instance
-              try {
-                let chartInstance = null;
-                
-                // Try different methods to get chart instance
-                if (typeof Chart.getChart === 'function') {
-                  chartInstance = Chart.getChart(originalChart);
-                } else if (originalChart.chart) {
-                  chartInstance = originalChart.chart;
-                } else if (Chart.instances && Object.keys(Chart.instances).length > 0) {
-                  chartInstance = Chart.instances[Object.keys(Chart.instances)[0]];
-                }
-
-                if (chartInstance) {
-                  const chartImage = chartInstance.toBase64Image();
-                  const clonedCanvas = resultsClone.querySelector(`#${chartId}`);
-                  if (clonedCanvas) {
-                    const img = document.createElement('img');
-                    img.src = chartImage;
-                    img.style.width = '100%';
-                    img.style.height = 'auto';
-                    img.style.display = 'block';
-                    img.style.margin = '0 auto';
-                    clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
-                  }
-                }
-              } catch (fallbackError) {
-                console.error('Fallback capture failed:', fallbackError);
-              }
+              console.error('Error capturing chart:', error);
             }
             resolve();
           });
@@ -601,7 +585,7 @@ class IpaModal {
         
         // Use original dimensions
         const width = Math.max(resultsClone.scrollWidth, 800);
-        const height = Math.max(resultsClone.scrollHeight + 200, 4500);
+        const height = Math.max(resultsClone.scrollHeight + 300, 4500);
         
         captureContainer.style.width = `${width}px`;
         
@@ -646,7 +630,7 @@ class IpaModal {
         };
 
         // Submit to Google Apps Script
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbxCTCsh-nizVSH-zrYANPQJKMNzTpTOZTj1rQFpeT9LmlBNxwovGIIZWxu39Yese-wBQA/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwmP2XZ-Gugmi-IpFN4RtVnfd55iMWhcplFR30reSAhXAY90eWWCPyNsJl3DzEou3kggA/exec';
         const form = new FormData();
         
         Object.keys(submissionData).forEach(key => {
@@ -867,7 +851,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="result-card buyer-card">
           <div class="result-card-header">
             <div class="result-card-icon">
-              <img src="./image/TLC_Square.png" alt="Buyer Icon">
+              <img src="https://theloanconnection.com.sg/wp-content/uploads/2025/02/TLC-Square.png" alt="Buyer Icon">
             </div>
             <h3 class="result-card-title">Buyer's Perspective</h3>
           </div>
@@ -960,7 +944,7 @@ document.addEventListener('DOMContentLoaded', function() {
           
           <div class="result-section">
             <h4 class="result-section-title">SINGLE OWNERSHIP STRUCTURE</h4>
-            <div id="pieChartContainer" class="pie-chart-container" style="height: 300px; width: 100%; margin: 20px 0;"></div>
+            <div id="pieChartContainer" class="pie-chart-container" style="width: 100%; margin: 20px 0;"></div>
             <div class="pie-chart-note" style="font-size: 12px; color: #666; text-align: center; margin-top: -10px;">
               Based on your property valuation of ${formatMoney(valuation)}.
             </div>
@@ -970,7 +954,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="result-card seller-card">
           <div class="result-card-header">
             <div class="result-card-icon">
-              <img src="./image/TLC_Square.png" alt="Seller Icon">
+              <img src="https://theloanconnection.com.sg/wp-content/uploads/2025/02/TLC-Square.png" alt="Seller Icon">
             </div>
             <h3 class="result-card-title">Seller's Perspective</h3>
           </div>
