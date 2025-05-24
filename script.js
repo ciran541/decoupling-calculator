@@ -577,7 +577,7 @@ class IpaModal {
           <div class="pdf-footer">
             <hr>
             <p>This report was generated on ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-            <p>For any questions, please contact our mortgage specialists at <a href="mailto:enquiry@theloanconnection.com.sg">enquiry@theloanconnection.com.sg</a></p>
+            <p>For any questions, please contact our mortgage specialists at <a href="mailto:hello@theloanconnection.com.sg">hello@theloanconnection.com.sg</a></p>
           </div>
         `;
         
@@ -586,7 +586,7 @@ class IpaModal {
         
         // Use original dimensions
         const width = Math.max(resultsClone.scrollWidth, 800);
-        const height = Math.max(resultsClone.scrollHeight + 300, 4500);
+        const height = Math.max(resultsClone.scrollHeight + 300, 4000);
         
         captureContainer.style.width = `${width}px`;
         
