@@ -138,14 +138,16 @@ function validateTotalFinancing(loan, buyerCpfUsage, sellerCpfUsage, valuation) 
   return null;
 }
 
-function createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuation) {
-  loanPercent = parseFloat(loanPercent.toFixed(1));
-  cpfPercent = parseFloat(cpfPercent.toFixed(1));
-  cashableEquityPercent = parseFloat(cashableEquityPercent.toFixed(1));
+function createPieChart(newTotalLoan, buyerCpfUsage, cpfUsedForDownpayment, valuation) {
+  // Calculate amounts based on your specifications
+  const loanValue = newTotalLoan;  // New Total Loan
+  const cpfValue = buyerCpfUsage + cpfUsedForDownpayment;  // CPF used for property + CPF used for downpayment
+  const cashValue = valuation - loanValue - cpfValue;  // Valuation - loan amount - cpf
   
-  const loanValue = (loanPercent / 100) * valuation;
-  const cpfValue = (cpfPercent / 100) * valuation;
-  const cashableEquityValue = (cashableEquityPercent / 100) * valuation;
+  // Calculate percentages
+  const loanPercent = parseFloat(((loanValue / valuation) * 100).toFixed(1));  // New Total Loan / Valuation x 100%
+  const cpfPercent = parseFloat(((cpfValue / valuation) * 100).toFixed(1));    // (CPF used for property + CPF used for downpayment) / Valuation x 100%
+  const cashPercent = parseFloat((100 - loanPercent - cpfPercent).toFixed(1)); // 100% - loan% - cpf%
   
   const canvas = document.createElement('canvas');
   canvas.id = 'buyerPieChart';
@@ -161,12 +163,13 @@ function createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuatio
     type: 'pie',
     data: {
       labels: [
-        `Cashable Equity (${cashableEquityPercent}% - ${formatMoney(cashableEquityValue)})`,
+        `Cash (${cashPercent}% - ${formatMoney(cashValue)})`,
         `CPF (${cpfPercent}% - ${formatMoney(cpfValue)})`,
         `Loan (${loanPercent}% - ${formatMoney(loanValue)})`
       ],
       datasets: [{
-        data: [cashableEquityPercent, cpfPercent, loanPercent],
+        // Use actual dollar amounts for chart proportions
+        data: [cashValue, cpfValue, loanValue],
         backgroundColor: [
           '#43a047',
           '#03a9e7',
@@ -1019,11 +1022,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     setTimeout(() => {
       if (typeof Chart !== 'undefined') {
-        createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuation);
+        createPieChart(newTotalLoan, buyerCpfUsage, cpfUsedForDownpayment, valuation);
       } else {
         setTimeout(() => {
           if (typeof Chart !== 'undefined') {
-            createPieChart(loanPercent, cpfPercent, cashableEquityPercent, valuation);
+            createPieChart(newTotalLoan, buyerCpfUsage, cpfUsedForDownpayment, valuation);
           }
         }, 1000);
       }
