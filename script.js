@@ -64,7 +64,7 @@ function calculateABSD(value, residency) {
 }
 
 function calculateSSD(value, yearsOwned) {
-  const rates = [0.12, 0.08, 0.04, 0];
+  const rates = [0.16, 0.12, 0.08, 0.04, 0];
   return value * rates[parseInt(yearsOwned)];
 }
 
