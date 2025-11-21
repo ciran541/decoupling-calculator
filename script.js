@@ -978,7 +978,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="result-section">
             <h4 class="result-section-title">Breakdown</h4>
             <div class="result-row highlight">
-              <span class="result-label">Sale of Property Share</span>
+              <span class="result-label">Sale of Part Share <span class="support-text">(${sellerSharePercent}% Share)</span></span>
               <span class="result-value primary">${formatMoney(sellingPrice)}</span>
             </div>
             <div class="result-row">
