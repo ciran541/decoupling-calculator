@@ -636,14 +636,18 @@ class IpaModal {
         // Get base64 for submission
         const pdfBase64 = pdf.output('datauristring').split(',')[1];
         
-        // Prepare submission data
+        // Prepare submission data (include tracking source + raw UTM params)
+        const urlParams = getURLParameters();
+        const source = urlParams.source || urlParams.utm_source || (urlParams.fbclid ? 'facebook' : '') || urlParams.utm_campaign || '';
         const submissionData = {
           timestamp: new Date().toISOString(),
           name: formData.get('name'),
           email: formData.get('emailAddress'),
           mobile: formData.get('mobileNumber'),
           pdfData: pdfBase64,
-          ...getURLParameters(),
+          source: source,
+          utm_params: JSON.stringify(urlParams),
+          referrer: document.referrer || '',
           ...decouplingDetails
         };
 
