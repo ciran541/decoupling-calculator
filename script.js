@@ -657,11 +657,12 @@ class IpaModal {
           buyerCpfOaBalance: decouplingDetails.buyerCpfOaBalance || '',
           interestRate: decouplingDetails.interestRate || '',
           pdfData: pdfBase64,
-          source: trafficSource
+          source: trafficSource,
+          referrer: document.referrer || ''
         };
 
         // Submit to Google Apps Script
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbzNJRaBTmi8V6yuNI6LEbFa7pCAt-gfXBEVg0Vecor2pF4NuprKywA0_BLlUXs68iI-dw/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbw8z-MSBsW8ZwC-rB48cmw1Tlwrr6bihAANProm7DYGQ3c8djignOcYZsxEX3O82UbQuQ/exec';
         const form = new FormData();
         
         Object.keys(submissionData).forEach(key => {
