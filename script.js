@@ -1,5 +1,26 @@
 function getURLParameters() {
   const params = {};
+  
+  // First, try to get parameters from iframe parent if available
+  if (window !== window.parent) {
+    try {
+      const parentUrl = document.referrer;
+      if (parentUrl) {
+        const parentParams = new URL(parentUrl).search.substring(1);
+        if (parentParams) {
+          const pairs = parentParams.split('&');
+          pairs.forEach(pair => {
+            const [key, value] = pair.split('=');
+            params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+          });
+        }
+      }
+    } catch (e) {
+      console.log('Could not parse parent URL parameters');
+    }
+  }
+  
+  // Then check direct URL parameters (for backward compatibility)
   const queryString = window.location.search.substring(1);
   if (queryString) {
     const pairs = queryString.split('&');
@@ -8,6 +29,7 @@ function getURLParameters() {
       params[decodeURIComponent(key)] = decodeURIComponent(value || '');
     });
   }
+  
   return params;
 }
 
