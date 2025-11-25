@@ -636,9 +636,10 @@ class IpaModal {
         // Get base64 for submission
         const pdfBase64 = pdf.output('datauristring').split(',')[1];
         
-        // Prepare submission data (include tracking source + raw UTM params)
+        // Get traffic source from URL parameter
         const urlParams = getURLParameters();
-        const source = urlParams.source || urlParams.utm_source || (urlParams.fbclid ? 'facebook' : '') || urlParams.utm_campaign || '';
+        const trafficSource = urlParams.source || 'direct';
+        
         const submissionData = {
           timestamp: new Date().toISOString(),
           name: formData.get('name'),
@@ -655,18 +656,12 @@ class IpaModal {
           buyerCpfUsage: decouplingDetails.buyerCpfUsage || '',
           buyerCpfOaBalance: decouplingDetails.buyerCpfOaBalance || '',
           interestRate: decouplingDetails.interestRate || '',
-          source: source,
-          utm_source: urlParams.utm_source || '',
-          utm_medium: urlParams.utm_medium || '',
-          utm_campaign: urlParams.utm_campaign || '',
-          utm_content: urlParams.utm_content || '',
-          fbclid: urlParams.fbclid || '',
-          referrer: document.referrer || '',
-          pdfData: pdfBase64
+          pdfData: pdfBase64,
+          source: trafficSource
         };
 
         // Submit to Google Apps Script
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbx9qfdDlCS3KUTIg3kbkwXtdrUqrOXaqXyxypCnMPvmV8_u0bA2HaXcnmFqz1n1a0sasQ/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzNJRaBTmi8V6yuNI6LEbFa7pCAt-gfXBEVg0Vecor2pF4NuprKywA0_BLlUXs68iI-dw/exec';
         const form = new FormData();
         
         Object.keys(submissionData).forEach(key => {
