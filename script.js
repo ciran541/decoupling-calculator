@@ -644,15 +644,29 @@ class IpaModal {
           name: formData.get('name'),
           email: formData.get('emailAddress'),
           mobile: formData.get('mobileNumber'),
-          pdfData: pdfBase64,
+          propertyValuation: decouplingDetails.propertyValuation || '',
+          outstandingLoan: decouplingDetails.outstandingLoan || '',
+          yearsSincePurchase: decouplingDetails.yearsSincePurchase || '',
+          buyerShare: decouplingDetails.buyerShare || '',
+          sellerShare: decouplingDetails.sellerShare || '',
+          residency: decouplingDetails.residency || '',
+          buyerAge: decouplingDetails.buyerAge || '',
+          cpfUsage: decouplingDetails.cpfUsage || '',
+          buyerCpfUsage: decouplingDetails.buyerCpfUsage || '',
+          buyerCpfOaBalance: decouplingDetails.buyerCpfOaBalance || '',
+          interestRate: decouplingDetails.interestRate || '',
           source: source,
-          utm_params: JSON.stringify(urlParams),
+          utm_source: urlParams.utm_source || '',
+          utm_medium: urlParams.utm_medium || '',
+          utm_campaign: urlParams.utm_campaign || '',
+          utm_content: urlParams.utm_content || '',
+          fbclid: urlParams.fbclid || '',
           referrer: document.referrer || '',
-          ...decouplingDetails
+          pdfData: pdfBase64
         };
 
         // Submit to Google Apps Script
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbx64qWMfrqYhu2p0rDDORltwQTKloLNpRyH5kRDv8XczEXnmycn2hRa3P9OrVsf2Uf5Tw/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbx9qfdDlCS3KUTIg3kbkwXtdrUqrOXaqXyxypCnMPvmV8_u0bA2HaXcnmFqz1n1a0sasQ/exec';
         const form = new FormData();
         
         Object.keys(submissionData).forEach(key => {
