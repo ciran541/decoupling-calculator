@@ -1,3 +1,16 @@
+function getURLParameters() {
+  const params = {};
+  const queryString = window.location.search.substring(1);
+  if (queryString) {
+    const pairs = queryString.split('&');
+    pairs.forEach(pair => {
+      const [key, value] = pair.split('=');
+      params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+    });
+  }
+  return params;
+}
+
 function formatMoney(amount) {
   const absAmount = Math.abs(amount);
   const formatted = "$" + Math.round(absAmount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -630,11 +643,12 @@ class IpaModal {
           email: formData.get('emailAddress'),
           mobile: formData.get('mobileNumber'),
           pdfData: pdfBase64,
+          ...getURLParameters(),
           ...decouplingDetails
         };
 
         // Submit to Google Apps Script
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwmP2XZ-Gugmi-IpFN4RtVnfd55iMWhcplFR30reSAhXAY90eWWCPyNsJl3DzEou3kggA/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbx64qWMfrqYhu2p0rDDORltwQTKloLNpRyH5kRDv8XczEXnmycn2hRa3P9OrVsf2Uf5Tw/exec';
         const form = new FormData();
         
         Object.keys(submissionData).forEach(key => {
